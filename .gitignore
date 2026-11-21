@@ -1,0 +1,46 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.bak
+*.tmp
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+.probe/
+
+# Local device maps (contain device-specific data)
+orbit/maps/
+.toolchain/
+
+# Android / Gradle
+.gradle/
+build/
+android-app/.gradle/
+android-app/build/
+android-app/app/build/
+android-app/local.properties
+android-app/keystore.properties
+android-app/*.jks
+*.apk
+*.aab
+debug.keystore
+android-app/app/src/main/python/
+
+# Helper build output
+build-helper/*
+!build-helper/build.sh
+
+# Logs and local databases
+*.log
+*.db
