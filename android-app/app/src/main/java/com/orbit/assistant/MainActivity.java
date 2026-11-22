@@ -1698,6 +1698,7 @@ public class MainActivity extends Activity {
         // chip row this replaces only offered seven providers and still asked
         // the reader to understand what a base URL was.
         final String[][] PROVIDERS = {
+                {"DeepSeek Flash", "https://api.deepseek.com", "deepseek-flash"},
                 {"DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"},
                 {"Groq", "https://api.groq.com/openai/v1", "openai/gpt-oss-120b"},
                 {"OpenAI", "https://api.openai.com/v1", "gpt-4o-mini"},
@@ -1748,7 +1749,7 @@ public class MainActivity extends Activity {
                 } else if (value.startsWith("sk-proj-")) {
                     picked = "OpenAI";
                 } else if (value.startsWith("sk-")) {
-                    picked = "DeepSeek";
+                    picked = "DeepSeek Flash";
                 }
                 if (picked.isEmpty()) {
                     return;

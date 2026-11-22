@@ -17,6 +17,8 @@ hands-on interaction.
 - Pair with adbd over wireless debugging and control the device through accessibility
   and shell channels.
 - Build and validate app maps with host-side tools.
+- Use DeepSeek Flash for text, images and tools; Groq is also supported.
+- Plan voice input and a "Hey Diya" wake word (see `docs/VOICE_AND_WAKE_PLAN.md`).
 - Export and import its own settings and maps as a backup archive.
 
 ## Requirements
@@ -65,7 +67,7 @@ The suite checks the shell guard, redaction rules, package identity and server l
 | `orbitcli/`, `orbitcli_android/` | Command-line tools and crawler |
 | `agent/`, `page_executor/`, `templates/`, `utils_mobile/` | Host-side helpers |
 | `configs/` | Example model settings |
-| `docs/` | Build guide and reference notes |
+| `docs/` | Build guide, maps explanation, voice/wake plan, guardrails draft and parity notes |
 | `tests/` | Local verification suite |
 
 ## Deployment notes
