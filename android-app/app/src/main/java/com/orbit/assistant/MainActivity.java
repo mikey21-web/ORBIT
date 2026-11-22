@@ -2617,7 +2617,7 @@ note(Tr.t("Hint: accessibility service is not enabled. Without it, ORBIT cannot 
                 handler.postDelayed(this::healAgent, 8000);
                 return;
             }
-            alert(Tr.t("ORBIT's background process is stuck (") + beat + Tr.t(" seconds without heartbeat."))
+            alert(Tr.t("ORBIT's background process is stuck (") + beat + Tr.t(" seconds without heartbeat.")
                     + Tr.t("\nI already tried restarting once; it hasn't recovered, please swipe ORBIT away from Recents and open again."));
             return;
         }
@@ -3550,7 +3550,7 @@ note(Tr.t("Hint: accessibility service is not enabled. Without it, ORBIT cannot 
         String what = action == null ? "" : action.trim();
         String how = detail == null ? "" : detail.trim();
         if ("route".equals(kind)) {
-            return "Routing: this step uses \"" + how + """;
+            return "Routing: this step uses \"" + how + "\"";
         }
         if ("escaped".equals(kind)) {
             String app = what.isEmpty() ? "App" : what;
@@ -3562,7 +3562,7 @@ note(Tr.t("Hint: accessibility service is not enabled. Without it, ORBIT cannot 
         }
         if ("type".equals(kind)) {
             // the search-query step the macro layer types by itself
-            return what.isEmpty() ? "Type something" : "Typing \"" + what + """;
+            return what.isEmpty() ? "Type something" : "Typing \"" + what + "\"";
         }
         if ("pull".equals(kind)) {
             // the detail is "moved back to the agent's display": what happened,
@@ -3595,7 +3595,7 @@ note(Tr.t("Hint: accessibility service is not enabled. Without it, ORBIT cannot 
                     return "Map replay: go to \"" + cleanLabel(name) + "\": " + m.group(1) + " actions";
                 }
             }
-            return "Map replay: go to \"" + cleanLabel(name) + """ + (how.contains("ok") ? " (done)" : "");
+            return "Map replay: go to \"" + cleanLabel(name) + "\"" + (how.contains("ok") ? " (done)" : "");
         }
         if ("vlm".equals(kind) || "tap".equals(kind) || "act".equals(kind)) {
             if ("launch".equals(what)) {
@@ -3624,7 +3624,7 @@ note(Tr.t("Hint: accessibility service is not enabled. Without it, ORBIT cannot 
             }
             if ("tap_text".equals(what)) {
                 return how.isEmpty() || "ok".equals(how)
-                        ? "Tap the text" : "Tap \"" + how + """;
+                        ? "Tap the text" : "Tap \"" + how + "\"";
             }
             if ("shell".equals(what)) {
                 // the detail is the command itself now, and a person reading
@@ -3660,7 +3660,7 @@ note(Tr.t("Hint: accessibility service is not enabled. Without it, ORBIT cannot 
             String target = cleanLabel(macro.group(1));
             return looksLikeId(target)
                     ? "· follow the known path (" + macro.group(2) + " steps)"
-                    : "· follow the known path into \"" + target + ""(" + macro.group(2) + " steps)";
+                    : "· follow the known path into \"" + target + "\" (" + macro.group(2) + " steps)";
         }
         if (line.endsWith("Full map")) {
             String target = cleanLabel(line.replace("Full map", ""));

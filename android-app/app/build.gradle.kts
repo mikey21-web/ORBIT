@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.util.UUID
 
 plugins {
     id("com.android.application")
@@ -9,6 +10,10 @@ plugins {
 android {
     namespace = "com.orbit.assistant"
     compileSdk = 34
+
+    buildFeatures {
+        buildConfig = true
+    }
 
     // arm64 only, on purpose: the virtual-display helper and the Python runtime
 // are built for it, so a Chromebook cannot run this app. Lint's ChromeOS ABI
@@ -24,7 +29,7 @@ defaultConfig {
         versionCode = 8
         versionName = "0.4.4"
         buildConfigField("int", "AGENT_PORT", System.getenv("ORBIT_PORT") ?: "8765")
-        buildConfigField("String", "BROWSER_TOKEN", "\"${java.util.UUID.randomUUID()}\"")
+        buildConfigField("String", "BROWSER_TOKEN", "\"${UUID.randomUUID()}\"")
 
         ndk {
             abiFilters += listOf("arm64-v8a")
