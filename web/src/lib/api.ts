@@ -83,7 +83,7 @@ export const api = {
   warmup: () => post<{ warmed: string[] }>("/warmup"),
 
   usage: (days = 7) => request<UsageData>(`/usage?days=${days}`),
-  frameUrl: () => `${getBase()}/frame${getToken() ? `?token=${encodeURIComponent(getToken())}` : ""}`,
+  frameUrl: () => `${getBase()}/frame`,
   frame: async (): Promise<string> => {
     const token = getToken();
     const res = await fetch(`${getBase()}/frame`, {

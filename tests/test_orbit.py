@@ -11,6 +11,9 @@ def test_shell_guard_blocks_chains_and_driving():
     agent = object.__new__(OrbitAgent)
     assert agent._shell_command_class("echo hi | sh") == "blocked"
     assert agent._shell_command_class("sh -c 'rm -rf /data'") == "blocked"
+    assert agent._shell_command_class("ls\nrm -rf /data") == "blocked"
+    assert agent._shell_command_class("pm install /data/app.apk") == "blocked"
+    assert agent._shell_command_class("cat /proc/kcore") == "blocked"
     assert agent._shell_command_class("am force-stop com.example.app") == "driving"
     assert agent._shell_command_class("dumpsys activity top") == "ok"
 

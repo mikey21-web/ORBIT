@@ -69,9 +69,9 @@ defaultConfig {
     }
 }
 
-// `app/src/main/python/orbit` is a generated copy of ../../orbit,
-// refreshed by sync-python.sh before each build (Chaquopy has no Kotlin-DSL
-// source-dir API). The module name is retained for runtime compatibility.
+// `app/src/main/python/orbit` is a generated copy of ../../orbit. This task
+// keeps it in sync on every build so shipped Python cannot drift from the
+// audited source (Chaquopy has no Kotlin-DSL source-dir API).
 
 chaquopy {
     defaultConfig {
@@ -98,9 +98,19 @@ chaquopy {
     }
 }
 
+val syncPythonSources by tasks.registering(Copy::class) {
+    from(rootProject.file("../orbit")) {
+        exclude("**/__pycache__/**", "**/tests/**", "**/*.pyc", "**/maps/**")
+    }
+    into(layout.projectDirectory.dir("src/main/python/orbit"))
+}
+tasks.matching { it.name.startsWith("merge") && it.name.endsWith("PythonSources") }
+    .configureEach { dependsOn(syncPythonSources) }
+
 dependencies {
     // Document-start JavaScript: the only reliable moment to wrap fetch/XHR,
     // before the page's own scripts run. onPageStarted is too late for a page
     // that fetches during parse (measured on a search results page).
     implementation("androidx.webkit:webkit:1.11.0")
+    implementation("com.github.k2-fsa.sherpa-onnx:sherpa-onnx:v1.13.5")
 }

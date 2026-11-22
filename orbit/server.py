@@ -31,9 +31,14 @@ import re
 import threading
 import time
 import uuid
+from urllib.parse import urlparse
 
 MAX_BODY = 1024 * 1024
 DEBUG_ENDPOINTS = os.environ.get("ORBIT_DEBUG_ENDPOINTS") == "1"
+ALLOWED_LLM_HOSTS = frozenset({
+    "api.deepseek.com", "api.groq.com", "api.openai.com",
+    "api.anthropic.com", "openrouter.ai",
+})
 
 
 class BodyTooLarge(Exception):
@@ -42,6 +47,7 @@ from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable, Optional
 
+from . import guardrails
 from .core.agent import AgentConfig, OrbitAgent
 from .core.app_map import AppMap
 from .core.memory import MemoryStore
@@ -179,7 +185,22 @@ def _prune(store: dict, keep: int) -> None:
         store.pop(key, None)
 
 
+def _redact_field(value, depth: int = 0):
+    if isinstance(value, str):
+        return guardrails.redact_output(value)
+    if depth >= 4:
+        return value
+    if isinstance(value, dict):
+        return {k: (v if k == "frame" else _redact_field(v, depth + 1))
+                for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_redact_field(v, depth + 1) for v in value]
+    return value
+
+
 def _update(task_id: str, **fields) -> None:
+    fields = {k: (v if k == "frame" else _redact_field(v))
+              for k, v in fields.items()}
     with LOCK:
         record = TASKS.setdefault(task_id, {})
         record.update(fields)
@@ -585,7 +606,7 @@ def _run(task_id: str, text: str, config: ServerConfig,
                     err_file.write(tb)
             except Exception:  # noqa: BLE001 - diagnostics must not fail a task
                 pass
-            _update(task_id, state="failed", answer=f"{type(exc).__name__}: {exc}")
+            _update(task_id, state="failed", answer="Task failed. Diagnostics are stored on the device.")
         finally:
             # A task may have followed its app onto the user's display; the next
             # one should start on the agent's own screen again.
@@ -960,22 +981,22 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError:
             logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return self._send(400, {"error": "bad json"})
-        config = self.server.config  # type: ignore[attr-defined]
-        api_key = str(body.get("api_key") or "") or getattr(config, "llm_api_key", "")
-        api_base = str(body.get("api_base") or "") or getattr(config, "llm_api_base", "")
-        model = str(body.get("model") or "") or getattr(config, "llm_model", "")
-        vision = str(body.get("vision_model") or "") or model
+        api_key = str(body.get("api_key") or "").strip()
+        api_base = str(body.get("api_base") or "").strip()
         if not api_key:
-            return self._send(200, {"ok": False, "detail": "No API Key provided"})
+            return self._send(200, {"ok": False, "detail": "Enter a key to test."})
+        parsed = urlparse(api_base)
+        if parsed.scheme != "https" or parsed.hostname not in ALLOWED_LLM_HOSTS:
+            return self._send(200, {"ok": False, "detail": "Endpoint is not allowed."})
+        model = str(body.get("model") or "").strip()
+        vision = str(body.get("vision_model") or "").strip() or model
         try:
-            # make_llm, not OpenAICompatClient directly: the protocol depends on
-            # the base URL, and a connection test that speaks the wrong one
-            # reports a 404 from a perfectly good endpoint.
             client = make_llm(api_key, api_base, model, vision)
             reply = client.text("", "Reply with just one word: available")
-        except Exception as exc:  # noqa: BLE001 - reported to the settings dialog
-            return self._send(200, {"ok": False, "detail": f"{type(exc).__name__}: {exc}"})
-        return self._send(200, {"ok": True, "detail": str(reply)[:80] or "(no reply)"})
+        except Exception:  # noqa: BLE001 - never echo provider errors or headers
+            logging.getLogger(__name__).exception("LLM test failed")
+            return self._send(200, {"ok": False, "detail": "Connection failed. Check the key, model and endpoint."})
+        return self._send(200, {"ok": True, "detail": "Key works."})
 
     def _drain_body(self) -> None:
         """Read and discard a request body so the connection stays usable."""
@@ -1102,13 +1123,19 @@ class Handler(BaseHTTPRequestHandler):
         print(f"[server] bench {bench_id}: {os.path.basename(map_path)}")
         self._send(202, {"id": bench_id})
 
+    def _cors(self) -> None:
+        origin = self.headers.get("Origin", "")
+        if origin in {"file://", "null", "http://127.0.0.1:5173"}:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Agent-Token")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
     def _send(self, code: int, payload: dict) -> None:
         body = json.dumps(payload).encode()
         self.send_response(code)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Agent-Token")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self._cors()
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -1120,10 +1147,12 @@ class Handler(BaseHTTPRequestHandler):
         self._guarded(self._get)
 
     def do_OPTIONS(self):  # noqa: N802
+        port = str(getattr(self.server, "server_port", 8765))
+        host = self.headers.get("Host", "")
+        if host not in {f"127.0.0.1:{port}", f"localhost:{port}"}:
+            return self._send(403, {"error": "forbidden host"})
         self.send_response(204)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Agent-Token")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self._cors()
         self.send_header("Content-Length", "0")
         self.end_headers()
 
@@ -1137,23 +1166,25 @@ class Handler(BaseHTTPRequestHandler):
         server = getattr(self, "server", None)
         config = getattr(server, "config", None) if server is not None else None
         token = getattr(config, "token", "") if config is not None else ""
-        if token and not self._authorized(token):
+        port = str(getattr(server, "server_port", 8765))
+        host = self.headers.get("Host", "")
+        if host not in {f"127.0.0.1:{port}", f"localhost:{port}"}:
+            return self._send(403, {"error": "forbidden host"})
+        if not token or not self._authorized(token):
             return self._send(401, {"error": "unauthorized: missing or wrong token"})
         try:
             handler()
         except (BrokenPipeError, ConnectionResetError):
             logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
-            return                       # the client went away; nothing to say
-        except BodyTooLarge as exc:
+            return
+        except BodyTooLarge:
             logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
-            return self._send(413, {"error": str(exc)})
-        except Exception as exc:          # noqa: BLE001 - that is the point
-            import traceback
-
-            traceback.print_exc()
+            return self._send(413, {"error": "request body too large"})
+        except Exception:                 # noqa: BLE001
+            logging.getLogger(__name__).exception("request failed")
             try:
-                self._send(500, {"error": f"{type(exc).__name__}: {exc}"})
-            except Exception:             # noqa: BLE001 - headers may be out already
+                self._send(500, {"error": "internal error"})
+            except Exception:             # noqa: BLE001
                 pass
 
     def _body_length(self) -> int:
@@ -1309,6 +1340,8 @@ class Handler(BaseHTTPRequestHandler):
                 event.set()
             return self._send(200, {"cancelled": True})
         if parts == ["type"]:
+            if not DEBUG_ENDPOINTS:
+                return self._send(404, {"error": "not found"})
             return self._debug_type()
         if parts == ["bench"]:
             return self._start_bench()
@@ -1355,7 +1388,7 @@ class Handler(BaseHTTPRequestHandler):
         # accessibility layer the mode is supposed to be about: measured on
         # NoteApp, half the steps of a GUI run were shell, one of them launching
         # the app onto the user's own display and starting a pull-back cycle.
-        SHELL_MODE[task_id] = bool(body.get("shell", True)) and MAPS_MODE[task_id]
+        SHELL_MODE[task_id] = bool(body.get("shell", False)) and MAPS_MODE[task_id]
         CANCEL[task_id] = threading.Event()
         PENDING[task_id] = {"question": "", "answer": None, "event": threading.Event()}
         print(f"[server] task {task_id}: {text[:60]}")
@@ -1372,7 +1405,7 @@ class Handler(BaseHTTPRequestHandler):
     def _get(self):
         path, _, query = self.path.partition("?")
         parts = path.strip("/").split("/")
-        if parts == ["dump"] and not DEBUG_ENDPOINTS:
+        if parts in (["dump"], ["web"], ["type"]) and not DEBUG_ENDPOINTS:
             return self._send(404, {"error": "not found"})
         if parts == ["web"]:
             # Debug surface for the page the app hosts: text, links, title.
@@ -1394,10 +1427,6 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"links": page.links()})
             if what == "title":
                 return self._send(200, {"title": page.title()})
-            if what.startswith("js="):
-                import urllib.parse as _up
-
-                return self._send(200, {"result": page.eval(_up.unquote(what[3:]))})
             if what.startswith("click="):
                 return self._send(200, {"clicked": page.click_text(_up.unquote(what[6:]))})
             return self._send(200, {"url": page.url(), "text": page.text()})
@@ -1680,6 +1709,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         # the host has no accessibility service, so there is no tree to prompt
         # with; uiautomator cannot see a virtual display either
         include_ui_text=False,
+        token=uuid.uuid4().hex,
     )
     server = start_server(args.port, config)
     print(f"listening on http://127.0.0.1:{args.port} (adb reverse tcp:{args.port} tcp:{args.port})")
