@@ -22,7 +22,12 @@ def test_vector_index_real_embeddings():
 
 
 def test_ocr_reader_real_ocr(tmp_path):
-    font = ImageFont.truetype("C:\\Windows\\Fonts\\arial.ttf", 48)
+    candidates = [
+        "C:\\Windows\\Fonts\\arial.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    ]
+    font_path = next((p for p in candidates if Path(p).exists()), "")
+    font = ImageFont.truetype(font_path, 48) if font_path else ImageFont.load_default()
     image = Image.new("RGB", (700, 160), "white")
     draw = ImageDraw.Draw(image)
     draw.text((20, 40), "HELLO ORBIT", fill="black", font=font)

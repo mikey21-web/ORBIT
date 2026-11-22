@@ -24,3 +24,10 @@ google.auth
 fuzzywuzzy
 openpyxl
 pandas>=1.5.0
+pdfplumber
+pypdf
+reportlab
+chromadb
+fastembed
+rapidocr_onnxruntime
+playwright
