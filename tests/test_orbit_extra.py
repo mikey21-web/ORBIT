@@ -69,3 +69,28 @@ def test_shipped_map_builds_operations_with_empty_label():
 
     path = ROOT / "android-app/app/src/main/assets/maps/settings.yaml"
     assert AppMap(path).build_operations()
+
+
+def test_groq_text_only_vision_sends_string_content():
+    from unittest.mock import patch
+
+    from orbit.core.llm import OpenAICompatClient
+
+    class Response:
+        status_code = 200
+        text = "{}"
+
+        def json(self):
+            return {"choices": [{"message": {"content": "ok"}}], "usage": {}}
+
+    client = OpenAICompatClient(
+        api_key="test",
+        api_base="https://api.groq.com/openai/v1",
+        model="openai/gpt-oss-120b",
+    )
+    assert client.vision_supported is False
+    with patch("orbit.core.llm.requests.post", return_value=Response()) as post:
+        assert client.vision("system", "user", b"png") == "ok"
+    payload = post.call_args.kwargs["json"]
+    assert isinstance(payload["messages"][1]["content"], str)
+    assert "Screenshot omitted" in payload["messages"][1]["content"]

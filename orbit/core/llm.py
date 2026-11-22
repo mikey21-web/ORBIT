@@ -77,6 +77,10 @@ class OpenAICompatClient:
         self.is_groq = "api.groq.com" in self.api_base
         self.model = model
         self.vision_model = vision_model or model
+        # Groq's gpt-oss models are text-only: a multimodal content array
+        # returns HTTP 400 "content must be a string". Degrade screenshot
+        # calls to text so the UI tree in the prompt still drives the agent.
+        self.vision_supported = "gpt-oss" not in self.vision_model.lower()
         self.timeout = timeout
         self.max_tokens = max_tokens
         # OpenRouter-specific: Qwen3-style models spend the whole budget on
@@ -108,8 +112,11 @@ class OpenAICompatClient:
         prose: the arguments arrive as JSON, so quoting, truncation and
         formatting drift stop being failure modes.
         """
+        use_image = image_png is not None and self.vision_supported
         user_content: object = user
-        if image_png is not None:
+        if image_png is not None and not self.vision_supported:
+            user_content = user + "\n\n[Screenshot omitted: this model is text-only.]"
+        elif use_image:
             user_content = [
                 {"type": "text", "text": user},
                 {
@@ -125,7 +132,7 @@ class OpenAICompatClient:
             {"role": "user", "content": user_content},
         ]
         payload = {
-            "model": self.vision_model if image_png is not None else self.model,
+            "model": self.vision_model if use_image else self.model,
             "messages": messages,
             "temperature": temperature,
             "max_tokens": self.max_tokens,
@@ -166,6 +173,11 @@ class OpenAICompatClient:
     def vision(
         self, system: str, user: str, image_png: bytes, temperature: float = 0.0
     ) -> str:
+        if not self.vision_supported:
+            return self.text(
+                system, user + "\n\n[Screenshot omitted: this model is text-only.]",
+                temperature,
+            )
         data_uri = "data:image/png;base64," + base64.b64encode(image_png).decode()
         return self._chat(
             [
