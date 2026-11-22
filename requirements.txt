@@ -1,5 +1,5 @@
 backoff==2.2.1
-lxml==4.9.3
+lxml>=5.3.0
 openai
 jsonlines
 numpy
