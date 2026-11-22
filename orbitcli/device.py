@@ -1,3 +1,4 @@
+import logging
 """iOS device operations via WebDriverAgent (WDA) HTTP API.
 
 All coordinates are in WDA logical points (not physical pixels).
@@ -73,7 +74,7 @@ def get_screen_size(wda_url: str = None, session_id: str = None) -> Tuple[int, i
             v = data.get("value", {})
             return v.get("width", 390), v.get("height", 844)
     except Exception:
-        pass
+        logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
     return 390, 844
 
 
@@ -275,7 +276,7 @@ def get_current_app(wda_url: str = None, session_id: str = None) -> str:
             if bundle_id:
                 return bundle_id
     except Exception:
-        pass
+        logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
     return "unknown"
 
 

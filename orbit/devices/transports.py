@@ -13,6 +13,8 @@ attached.
 
 from __future__ import annotations
 
+import posixpath
+import shlex
 import socket
 
 import select
@@ -78,7 +80,7 @@ class HostProcess:
 
 
 class HostAdbTransport:
-    """Talks to the phone through the ``adb`` binary on this machine."""
+    """Talks to the phone through the ``adb`` binary on the host."""
 
     def __init__(self, adb: str = "adb", serial: Optional[str] = None, timeout: float = 30.0) -> None:
         self.adb = adb
@@ -122,7 +124,9 @@ class HostAdbTransport:
         import base64
 
         encoded = base64.b64encode(data).decode()
-        self.shell(f"mkdir -p $(dirname {path}); echo {encoded} | base64 -d > {path}")
+        parent = shlex.quote(posixpath.dirname(path) or ".")
+        target = shlex.quote(path)
+        self.shell(f"mkdir -p {parent}; echo {encoded} | base64 -d > {target}")
 
 
 # -- on-device side ----------------------------------------------------------

@@ -50,6 +50,8 @@ def pair(
     """Run the whole handshake; returns the device's peer info."""
     if not code.strip():
         raise PairingError("pairing code is empty")
+    if host not in ("127.0.0.1", "localhost"):
+        raise PairingError("pairing connects to loopback only")
     key = identity if identity is not None else generate_key()
     cert_pem, key_pem = self_signed_cert(key)
 

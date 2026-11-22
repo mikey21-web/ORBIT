@@ -26,6 +26,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+import shlex
 import threading
 import time
 from dataclasses import dataclass, field
@@ -337,10 +338,9 @@ class AgentConfig:
     #: was left with a dead local API and no answer (measured: four runs in a
     #: row died this way, minutes in, with the process still alive).
     stall_timeout: float = 180.0
-    #: The agent may run shell commands on the phone. On by default: opening an
-    #: app or reading a setting with one command beats tapping to the same place,
-    #: and commands that change the phone ask first.
-    shell_enabled: bool = True
+    #: Shell access must be granted per task. Screen content can carry instructions,
+    #: so the agent should not reach the phone shell without an explicit choice.
+    shell_enabled: bool = False
     macro_enabled: bool = True
     #: Where the record of apps that asked for a captcha lives. Empty means the
     #: agent does not remember them.
@@ -428,8 +428,8 @@ class _TeeSteps(list):
 #: Text that means the app has decided a person must prove they are one.
 #: Deliberately specific: "verification code" alone shows up in ordinary settings pages.
 CHALLENGE_RE = re.compile(
-    r"(CAPTCHA|security check|texttexttexttext|drag the slider|please complete verification|texttexttexttext"
-    r"|texttextverification code|textinputverification code|texttexttexttext|texttexttexttext)"
+    r"(CAPTCHA|security check|text|drag the slider|please complete verification|text"
+    r"|textverification code|textinputverification code|text|text)"
 )
 
 
@@ -578,8 +578,8 @@ class OrbitAgent:
             time.time() - getattr(self, "_heartbeat", time.time()))
         return self._result(
             False,
-            f"texttexttexttext:{seconds} textnotexttext,alreadyintext.cantexttexttexttimes,"
-            "ifstillisstay ontexttexttext,thattextstepneedItexttextlooktextdown.",
+            f"text:{seconds} textnotext,alreadyintext.cantexttimes,"
+            "ifstillisstay ontext,thattextstepneedItextlooktextdown.",
             "stalled",
             round_no,
         )
@@ -633,8 +633,8 @@ class OrbitAgent:
             self.steps.append(Step(0, "launch", exc.package, "refused"))
             answer = (
                 f"textnottext`{exc.package}`:itofdeclare the home screen as singleTask,"
-                f"texttextonlywillputittexttextselftextatofthattexttexttext,texttexttextontextnotcome."
-                f"texttext App,textattexttextontexttexttexttext."
+                f"textonlywillputittextselftextatofthattext,textontextnotcome."
+                f"text App,textattextontext."
             )
             return self._result(False, answer, "unlaunchable", 0)
 
@@ -771,7 +771,7 @@ class OrbitAgent:
 
         Measured: the planner split "open https://example.com texttell methistextsay
         what" into subtasks, one of which was nonsense ("Settingsnew") and launched
-        UCtexttexttext -- a browser app the agent cannot drive.
+        UCtext -- a browser app the agent cannot drive.
         """
         lowered = (task or "").lower()
         return "http://" in lowered or "https://" in lowered or "www." in lowered
@@ -885,14 +885,14 @@ class OrbitAgent:
     # -- macro layer -----------------------------------------------------
 
 
-    #: `search`texttexttexttext```search texttextoftexttext` -  the user's own words for a query.
-    QUERY_RE = __import__("re").compile(r"[texttexttext]\s*[textdowndown]?\s*[``\"'`]?([^``\"'`,,.??\n]{2,20})[``\"'`]?")
+    #: `search`text```search textoftext` -  the user's own words for a query.
+    QUERY_RE = __import__("re").compile(r"[text]\s*[textdowndown]?\s*[``\"'`]?([^``\"'`,,.??\n]{2,20})[``\"'`]?")
 
     @classmethod
     def _carried_entity(cls, carry: str) -> str:
         """The most recent `…` / `…` / "…" in what an earlier subtask said.
 
-        Our own answers quote the thing they found ("textintexttoofsteptexttexttexttextis
+        Our own answers quote the thing they found ("textintexttoofsteptextis
         `the hotel`"), which is exactly the value the next subtask needs.
         """
         found = ""
@@ -923,7 +923,7 @@ class OrbitAgent:
             entity = cls._carried_entity(carry)
             if entity:
                 return entity
-        for marker in ("search", "search", "texttexttext", "texttext", "texttextdown"):
+        for marker in ("search", "search", "text", "text", "textdown"):
             index = text.find(marker)
             if index < 0:
                 continue
@@ -1249,9 +1249,8 @@ class OrbitAgent:
                 # say so and offer it, instead of leaving the user guessing why
                 # the phone is back on this chat.
                 if getattr(self, "_drove_app", False):
-                    answer += "needIputtexttextthatpagetexttoyouoftexttextoncontinuetext?"
-        else:
-            answer = "thistexttexttextneedtexttextstepdo,steptextstepthennogotext."
+                    answer += "Should I put that page on your screen to continue?"
+            answer = "I still need a few steps; the remaining work is shown above."
         return self._result(False, answer, "partial" if answers else "planner",
                             rounds=len(steps))
 
@@ -1468,7 +1467,7 @@ class OrbitAgent:
             self._budget = _Budget(self.config.max_rounds)
         for round_no in range(1, self.config.max_rounds + 1):
             if not self._budget.take():
-                missing = "this timetexttexttextgoofsteptextalreadyusetext."
+                missing = "this timetextgoofsteptextalreadyusetext."
                 achieved = self._achieved()
                 return self._result(
                     False,
@@ -1513,8 +1512,8 @@ class OrbitAgent:
                         self.history.append("the notification shade was open; closed it")
                         continue
                 raise _Stranded(
-                    "notificationstextbytextdowncome,ontextisyouofnotifications(textintexttexttexttexttextWireless debugging),"
-                    "Inotgotextit.\ntextputittexttexttextagainsaytexttimes,texttexttell metextdotext."
+                    "notificationstextbytextdowncome,ontextisyouofnotifications(textintextWireless debugging),"
+                    "Inotgotextit.\ntextputittextagainsaytexttimes,texttell metextdotext."
                 )
 
             # Whatever the app is showing, a challenge is the user's to answer.
@@ -1537,8 +1536,8 @@ class OrbitAgent:
                 repeated = ", ".join(self.actions[-self.config.loop_threshold:])
                 return self._result(
                     False,
-                    f"texttext {self.config.loop_threshold} timesdotexttexttexttext({repeated}),"
-                    f"texttextnotexttext,texttexttext.",
+                    f"text {self.config.loop_threshold} timesdotext({repeated}),"
+                    f"textnotext,text.",
                     "loop",
                     round_no,
                 )
@@ -1565,7 +1564,7 @@ class OrbitAgent:
                 pending_notice = STALE_SCREEN_NOTICE
                 stale_rounds = self.config.no_new_data_limit - 1
             elif stale_rounds >= self.config.no_new_data_limit:
-                missing = f"texttexttexttext {stale_rounds} timesnotexttext,thenstay onthistext."
+                missing = f"text {stale_rounds} timesnotext,thenstay onthistext."
                 achieved = self._achieved()
                 return self._result(
                     False,
@@ -1760,12 +1759,12 @@ class OrbitAgent:
         # Running out of steps is not the same as failing: often the screen is
         # already where the user wanted it. Say what is on it instead of handing
         # back the word "max_rounds".
-        answer = "thistexttexttextusetextsteptextontext,textcometexttexttexttext."
+        answer = "I used all the steps for this turn. Here is what is on the screen."
         try:
             last_xml = self.device.dump_ui()
             if self._shade_is_open(last_xml):
                 # Describe the app, not the notifications a stray tap pulled
-                # down: the first version answered with texttexttexttextnotifications / texttexttexttexttext.
+                # down: the first version answered with textnotifications / text.
                 try:
                     self.device.press_back()
                     time.sleep(0.6)
@@ -1774,9 +1773,9 @@ class OrbitAgent:
                 last_xml = self.device.dump_ui()
             labels = [text for text, _x, _y in self._ui_texts(last_xml)[:6]]
             app = self._app_label(self._driving_package) if self._driving_package else ""
-            where = f"nowstay on`{app}`" if app else "nowstay ontexttextpage"
+            where = f"nowstay on`{app}`" if app else "nowstay ontextpage"
             if labels:
-                answer += where + ",texttextonhave:" + ",".join(labels) + "."
+                answer += where + ",textonhave:" + ",".join(labels) + "."
             else:
                 answer += where + "."
         except Exception:  # noqa: BLE001 - the answer must not fail the run
@@ -1793,14 +1792,14 @@ class OrbitAgent:
     _SUCCESS_WORDS = ("text", "success", "done", "done", "opened")
     #: A failure report is never second-guessed, and "nodone" contains "done",
     #: so negation is checked first.
-    _FAILURE_WORDS = ("no", "texttext", "texttext", "text", "cannot", "failure", "cannot", "text",
+    _FAILURE_WORDS = ("no", "text", "text", "text", "cannot", "failure", "cannot", "text",
                       "not ", "couldn't", "cannot", "unable")
 
     #: A question the user asked, rather than an action to perform.
-    _QUESTION_HINTS = ("?", "?", "texttext", "texttext", "texttext", "what", "text")
+    _QUESTION_HINTS = ("?", "?", "text", "text", "text", "what", "text")
 
     #: Answers that decline to look, as opposed to reporting a failure.
-    _REFUSAL_WORDS = ("cannot", "cannot see", "looknottext", "cannottexttext", "needtextlook")
+    _REFUSAL_WORDS = ("cannot", "cannot see", "looknottext", "cannottext", "needtextlook")
 
     #: Labels that spend money. Generated maps never contain these (the crawler
     #: refuses to tap them), so this guards the VLM path and hand-edited maps.
@@ -1812,14 +1811,14 @@ class OrbitAgent:
     #: about whether the agent is stuck.
     SCREENLESS_ACTIONS = ("shell", "web_text", "web_network", "wait")
 
-    SPEND_WORDS = ("texttext", "texttext", "texttext", "downtext", "submittexttext", "texttexttexttext",
-                   "texttext", "texttext", "tip", "texttext", "texttextwilltext", "texttexttexttext")
+    SPEND_WORDS = ("text", "text", "text", "downtext", "submittext", "text",
+                   "text", "text", "tip", "text", "textwilltext", "text")
 
     #: What an amount looks like on screen, used to say how much is at stake.
     _AMOUNT_RE = re.compile(r"[¥￥]\s*\d+(?:\.\d+)?|\d+(?:\.\d+)?\s*yuan|total.{0,12}yuan")
 
     #: Replies that mean "go ahead".
-    _CONSENT_WORDS = ("continue", "texttext", "agree", "can", "text", "text", "yes", "ok", "go")
+    _CONSENT_WORDS = ("continue", "text", "agree", "can", "text", "text", "yes", "ok", "go")
 
     @classmethod
     def _spends_money(cls, label: str) -> bool:
@@ -1848,9 +1847,9 @@ class OrbitAgent:
             amount = self._amount_on_screen(self.device.dump_ui())
         except DeviceError:
             pass
-        what = f"`{label}`" + (f",texttexttexttexttext {amount}" if amount else "")
+        what = f"`{label}`" + (f",text {amount}" if amount else "")
         question = (
-            f"thistextstepwilltexttext:{what}.continue??reply`continue`texttext,replytexthetexttextcontentallwillcancel."
+            f"thistextstepwilltext:{what}.continue??reply`continue`text,replytexthetextcontentallwillcancel."
         )
         if self.ask is None:
             self.steps.append(Step(round_no, "confirm", label, "no one to ask"))
@@ -1950,7 +1949,7 @@ class OrbitAgent:
         import datetime
 
         now = datetime.datetime.now()
-        week = "texttexttexttexttexttexttext"[now.weekday()]
+        week = "text"[now.weekday()]
         return (
             f"textdaysis {now.year}-{now.month:02d}-{now.day:02d}(text{week})"
             f" {now.hour:02d}:{now.minute:02d}."
@@ -2102,8 +2101,8 @@ class OrbitAgent:
         carry = getattr(self, "_carry", "")
         if not carry:
             return ""
-        return ("## texttexttextstepalreadytexttooftexttext\n"
-                "texttextusedowntextoftexttext,notwantagaingotextuseralreadytexttexttooftexttext:\n"
+        return ("## textstepalreadytexttooftext\n"
+                "textusedowntextoftext,notwantagaingotextuseralreadytexttooftext:\n"
                 + carry)
 
     def _stay_hint(self) -> str:
@@ -2124,15 +2123,15 @@ class OrbitAgent:
         ledger = getattr(self, "_ledger", None) or []
         limit = self.config.max_rounds
         left = max(limit - round_no, 0)
-        lines = [f"## texttext(step {round_no}/{limit} step,stilltext {left} step)"]
+        lines = [f"## text(step {round_no}/{limit} step,stilltext {left} step)"]
         if ledger:
             # failures first: they are the ones worth not repeating
             failed = [line for line in ledger if line.endswith("failure")][-3:]
             done = [line for line in ledger if line.endswith("success")][-4:]
             lines += [f"  - textdone:{line[:-3]}" for line in done]
-            lines += [f"  - textfailure:{line[:-3]}(notwanttexttext)" for line in failed]
+            lines += [f"  - textfailure:{line[:-3]}(notwanttext)" for line in failed]
         else:
-            lines.append("  - stillnotexttexttexttextsteptext")
+            lines.append("  - stillnotextsteptext")
         return "\n".join(lines)
 
     def _screen_hint(self, xml: str) -> tuple[str, str]:
@@ -2228,18 +2227,18 @@ class OrbitAgent:
                 try:
                     typed = bool(device.input_text(wanted))
                 except UnsupportedOperation:
-                    # ReviewApp,NoteAppofsearchtextnotistexttexttextinputtext:dump texttexttexttexttexttexttexttext
-                    # allno,ACTION_SET_TEXT texttexttexttext,shell of `input text` textonlytext
-                    # ASCII.texttext(2026-11-15):ittexttexttextto ASCII button,textputtexttexttexttext
-                    # intextofsearchtexttext -  - solettexttexttexttexttext,againgotexttexttextonthattextintexttexttext.
+                    # ReviewApp,NoteAppofsearchtextnotistextinputtext:dump text
+                    # allno,ACTION_SET_TEXT text,shell of `input text` textonlytext
+                    # ASCII.text(2026-11-15):ittextto ASCII button,textputtext
+                    # intextofsearchtext -  - solettext,againgotextonthattextintext.
                     typed = False
                     if wanted.isascii():
                         raise
                     self.history.append(
-                        f"type({wanted!r}) textnottextgo:thisinputtextnotistexttexttextinputtext,"
-                        f"onlytexttextto ASCII button.textusetexttextagaintexttexttimes(texttext`texttext`→"
-                        f"`huoguo`),thentexttexttextonthattexttexttextintexttextofsearchtexttext,"
-                        f"itthenwaittexttextyouinputintext."
+                        f"type({wanted!r}) textnottextgo:thisinputtextnotistextinputtext,"
+                        f"onlytextto ASCII button.textusetextagaintexttimes(text`text`→"
+                        f"`huoguo`),thentextonthattextintextofsearchtext,"
+                        f"itthenwaittextyouinputintext."
                     )
                     self.log("[agent] type refused (not an accessible field); pinyin advised")
                     return False
@@ -2287,7 +2286,7 @@ class OrbitAgent:
                     # A singleTask activity is always delivered to the display
                     # its task already lives on, so it cannot be started on the
                     # virtual one. It can still be driven on the user's screen:
-                    # refusing outright left "nowtexttext" unanswerable.
+                    # refusing outright left "nowtext" unanswerable.
                     follow = getattr(device, "follow_to_user_display", None)
                     if follow is not None and follow():
                         name_text = self._app_label(package)
@@ -2305,17 +2304,17 @@ class OrbitAgent:
                     name_text = self._app_label(package)
                     raise _Stranded(
                         f"`{name_text}`ofdeclare the home screen as singleTask,the system will only put it on your own screen,"
-                        f"textInowtexttexttexttextgo.\n"
-                        f"ifwanttextofistexttexttexttext,can let me use the built-in browser;"
+                        f"textInowtextgo.\n"
+                        f"ifwanttextofistext,can let me use the built-in browser;"
                         f"if you really need to`{name_text}`itself,please open it yourself."
                     )
                 until = self._challenge_until.get(package, 0)
                 if until > time.time():
                     minutes = int((until - time.time()) // 60) + 1
                     raise _Stranded(
-                        f"`{self._app_label(package)}`texttextshowed a security check,"
-                        f"Itexttextnotautomatictexttextit(stillwant {minutes} minutes)."
-                        f"iftexttextalreadydone,tell meagaintexttexttimes."
+                        f"`{self._app_label(package)}`textshowed a security check,"
+                        f"Itextnotautomatictextit(stillwant {minutes} minutes)."
+                        f"iftextalreadydone,tell meagaintexttimes."
                     )
                 # Launching is a reset: it drops whatever progress the last
                 # action made. A model that keeps relaunching never gets past
@@ -2352,9 +2351,9 @@ class OrbitAgent:
                 self._drove_app = True
                 if self._already_in_front(device, package):
                     self.history.append(
-                        f"{self._app_label(package)} alreadytexttext,thenatyoutexttextoftexttexton."
-                        f"notwantrebootit:texttextattexttextpagetexttext -  - type() input,"
-                        f"tap_index() texttext,scroll() texttext."
+                        f"{self._app_label(package)} alreadytext,thenatyoutextoftexton."
+                        f"notwantrebootit:textattextpagetext -  - type() input,"
+                        f"tap_index() text,scroll() text."
                     )
                     self.log("[agent] launch skipped (already in front)")
                     return False
@@ -2605,9 +2604,9 @@ class OrbitAgent:
         minutes = int(CHALLENGE_COOLDOWN // 60)
         return self._result(
             False,
-            f"`{self._app_label(package) if package else 'this App'}`texttextsecurity check,"
-            f"Ialreadyputittexttoyouoftexttexton.textyoutexttextdonetexttext(texttexttell metexttexttexttexttexttext),"
-            f"{minutes} minutestextInotwillagainautomatictexttextit -  - texttexttexttextverification codeonlywilllettexttexttexttexttext.",
+            f"`{self._app_label(package) if package else 'this App'}`textsecurity check,"
+            f"Ialreadyputittexttoyouoftexton.textyoutextdonetext(texttell metext),"
+            f"{minutes} minutestextInotwillagainautomatictextit -  - textverification codeonlywilllettext.",
             "challenge",
             round_no,
         )
@@ -2624,13 +2623,12 @@ class OrbitAgent:
         # asking them to take over is a pointless question with no answer.
         if self._launch_mode(package) in (2, 3):
             raise _Stranded(
-                f"`{name}`ofdeclare the home screen as singleTask,the system will only put it on your own screen,"
-                f"agent cannotatitoftexttextontexttext.\n"
-                f"ifyouwanttextofisdaystext,texttext,texttextthistexttexttexttexttext,can let me use the built-in browser;"
-                f"if you really need to`{name}`itself,please open it yourself."
+                f"`{name}` declares its home screen as singleTask, so the system puts it on your own screen, "
+                f"where the agent cannot operate it.\n"
+                f"If you only want public information, let me use the built-in browser; "
+                f"if you really need `{name}` itself, please open it yourself."
             )
-        if package in getattr(self, "_handed_over", set()):
-            raise _Stranded(
+        raise _Stranded(
                 f"`{name}`can only operate on your screen,already opened it for you,textselfdonetextdownofsteptext."
             )
         self._handed_over = getattr(self, "_handed_over", set())
@@ -2640,20 +2638,20 @@ class OrbitAgent:
                 f"`{name}`can only operate on your screen,needyouselfopentextdone."
             )
         reply = self.ask(
-            f"`{name}`alreadyopenatyouoftexttexton,thistextstepneedyoutexttextdone(log in,verification codetexttexttext).\n"
+            f"`{name}`alreadyopenatyouoftexton,thistextstepneedyoutextdone(log in,verification codetext).\n"
             "reply when done`done`,I will continue;reply`cancel`then give up."
         )
         self.steps.append(Step(0, "handover", package, f"{reply or 'no reply'}"))
         if not reply or any(word in reply for word in ("cancel", "forget it", "give up", "cancel", "no")):
             self.history.append(f"hand_over: cancelled by the user ({reply!r})")
-            raise _Stranded(f"youcancel`{package}`thistextstep,texttextstay onthistext.")
+            raise _Stranded(f"youcancel`{package}`thistextstep,textstay onthistext.")
         try:
             self.device.launch(package)
             return True
         except NeedsHandover:
             raise _Stranded(
-                f"`{name}`onlytextatyouselfoftexttextontexttext,agent cannotatitoftexttextoncontinue."
-                f"already opened it for you,textdownofsteptexttextselfdone."
+                f"`{name}`onlytextatyouselfoftextontext,agent cannotatitoftextoncontinue."
+                f"already opened it for you,textdownofsteptextselfdone."
             ) from None
         except DeviceError:
             return False
@@ -2665,31 +2663,55 @@ class OrbitAgent:
     #: the agent then has to undo (measured: 8 shell calls in one 38-step run,
     #: most of them re-opening NoteApp or dumping window state). Launching has its
     #: own tool, which knows about displays; this one is for looking things up.
-    SHELL_DRIVING = (
-        "am start", "am force-stop", "am display", "monkey", "input ",
-        "wm ", "cmd display", "svc ", "screencap",
-    )
+    SHELL_BLOCKED_HEADS = frozenset({"logcat", "tail", "top", "watch", "while"})
+    SHELL_RISKY_HEADS = frozenset({"rm", "reboot", "mkfs", "wipe", "factory", "dd", "su", "sh", "bash", "eval", "exec"})
+    SHELL_DRIVING_PAIRS = frozenset({
+        ("am", "start"), ("am", "force-stop"), ("am", "display"),
+        ("cmd", "display"), ("cmd", "package"), ("input", ""), ("monkey", ""),
+        ("screencap", ""), ("svc", ""), ("wm", ""),
+    })
+    SHELL_RISKY_PAIRS = frozenset({
+        ("pm", "clear"), ("pm", "uninstall"), ("pm", "disable"), ("pm", "hide"),
+        ("pm", "grant"), ("pm", "revoke"), ("settings", "delete"),
+        ("settings", "put"), ("cmd", "wifi"), ("content", "delete"),
+        ("content", "insert"), ("content", "update"),
+    })
+    SHELL_RISKY_FLAGS = frozenset({"-delete", "--delete", "-rf", "-r", "-f"})
+    SHELL_CHAIN_TOKENS = (";", "&&", "||", "|", "$(", "`")
 
-    RISKY_SHELL = (
-        "rm ", "rm -", "uninstall", "pm clear", "factory", "reboot", "mkfs",
-        "settings delete", "settings put", "pm disable", "pm hide", "dd if",
-        "wipe", "am force-stop", "svc ", "cmd wifi", "input keyevent", "pm grant",
-        "pm revoke",
-    )
-
-    #: Commands that never return, or that would flood the prompt.
-    BLOCKED_SHELL = ("logcat", "tail -f", "top", "cat /dev/", "while true", "watch ")
+    def _shell_command_class(self, command: str) -> str:
+        if any(token in command for token in self.SHELL_CHAIN_TOKENS):
+            return "blocked"
+        try:
+            parts = shlex.split(command)
+        except ValueError:
+            return "blocked"
+        if not parts:
+            return "blocked"
+        head = parts[0].rsplit("/", 1)[-1].lower()
+        sub = parts[1].lower() if len(parts) > 1 else ""
+        if head in self.SHELL_BLOCKED_HEADS or head in self.SHELL_RISKY_HEADS:
+            return "blocked"
+        if head == "cat" and any(part.startswith("/dev/") for part in parts[1:]):
+            return "blocked"
+        if head == "find" and any(part in self.SHELL_RISKY_FLAGS for part in parts[1:]):
+            return "risky"
+        if (head, sub) in self.SHELL_DRIVING_PAIRS or (head, "") in self.SHELL_DRIVING_PAIRS:
+            return "driving"
+        if (head, sub) in self.SHELL_RISKY_PAIRS:
+            return "risky"
+        return "ok"
 
     def _confirm_risky(self, command: str) -> bool:
         """A command that changes the phone needs a yes before it runs."""
         if self.config.autonomous:
-            return True
+            self.history.append("shell: risky command refused in autonomous mode")
+            return False
         if self.ask is None:
             self.history.append("shell: nobody to confirm a destructive command with")
             return False
         reply = self.ask(
-            f"thistexttexttextwilltexttexttexttext:\n{command}\ncontinue??reply`continue`texttext,"
-            "texthetexttextcontentallwillcancel."
+            f"This command will change the phone:\n{command}\nReply continue to allow it; anything else cancels."
         )
         allowed = self._consents(reply)
         self.steps.append(Step(0, "confirm", command[:40],
@@ -2743,8 +2765,8 @@ class OrbitAgent:
         if not self.config.shell_enabled:
             self.history.append("shell: not available for this task")
             return False
-        lowered = command.lower()
-        if any(word in lowered for word in self.SHELL_DRIVING):
+        kind = self._shell_command_class(command)
+        if kind == "driving":
             self.history.append(
                 f"shell: {command[:60]!r} refused -- that drives the phone. Use "
                 f"launch() to open an app (it sets the display), tap/tap_index "
@@ -2752,11 +2774,10 @@ class OrbitAgent:
             )
             self.log("[agent] shell refused (drives the phone)")
             return False
-        for word in self.BLOCKED_SHELL:
-            if word in lowered:
-                self.history.append(f"shell: refusing {word.strip()!r}, it never returns")
-                return False
-        if any(word in lowered for word in self.RISKY_SHELL):
+        if kind == "blocked":
+            self.history.append(f"shell: refusing {command[:80]!r}, it is not safe to run")
+            return False
+        if kind == "risky":
             if not self._confirm_risky(command):
                 self.history.append(f"shell: declined {command[:80]!r}")
                 return False
@@ -2764,7 +2785,8 @@ class OrbitAgent:
         if cache is None:
             cache = {}
             self._shell_cache = cache
-        if command in cache:
+        key = (command, len(self.steps))
+        if key in cache:
             # Measured: the model ran the same `ls` six times, because the
             # screen does not change and it re-checks. The output is already in
             # the history; say so instead of running it again.
@@ -2783,7 +2805,7 @@ class OrbitAgent:
             self.history.append(f"shell: {command[:80]} failed: {exc}")
             return False
         output = output.strip()
-        cache[command] = output
+        cache[key] = output
         self.history.append(f"shell: {command[:120]} -> {output[:600] or '(no output)'}")
         return True
 
@@ -2878,8 +2900,8 @@ class OrbitAgent:
             return False
         weblib.ensure_open(self.device, url, display=0)
         reply = self.ask(
-            "thistexttextwantCAPTCHA,alreadyputitopenatyouoftexttexton.\n"
-            "reply when done`done`,I will continue;reply`cancel`then give up."
+            "This site shows a CAPTCHA, so I put it on your screen.\n"
+            "Reply done when you finish it and I will continue; reply cancel to stop."
         )
         self.steps.append(Step(0, "handover", url[:80], f"{reply or 'no reply'}"))
         if not reply or any(word in reply for word in ("cancel", "forget it", "give up", "cancel", "no")):
@@ -2916,8 +2938,8 @@ class OrbitAgent:
             except DeviceError:
                 moved = False
         question = (
-            f"needyoutexttexttexttext:{reason or 'thistextsteponlyhaveyoutextdo'}.\n"
-            + (f"`{package}`alreadytexttoyouoftexttexton." if moved else "")
+            f"needyoutext:{reason or 'thistextsteponlyhaveyoutextdo'}.\n"
+            + (f"`{package}`alreadytexttoyouoftexton." if moved else "")
             + "reply when done`done`,I will continue;reply`cancel`then give upthistextstep."
         )
         reply = self.ask(question)
@@ -3026,7 +3048,7 @@ class OrbitAgent:
                     )
                     self.history.append(
                         f"{self._app_label(package)} a page jumped to your screen,"
-                        f"Ifirstatyouoftexttextoncontinuedo,texttexttextagaintexttextgo."
+                        f"Ifirstatyouoftextoncontinuedo,textagaintextgo."
                     )
                     return True
             except DeviceError:
@@ -3049,7 +3071,7 @@ class OrbitAgent:
                     )
                     self.history.append(
                         f"{self._app_label(package)} a page jumped to your screen,"
-                        f"Iputittexttextselfoftexttext,continueattexttextdo."
+                        f"Iputittextselfoftext,continueattextdo."
                     )
                     return True
             except DeviceError:
@@ -3085,9 +3107,9 @@ class OrbitAgent:
                 return True
             name_text = self._app_label(package)
             raise _Stranded(
-                f"`{name_text}`texttimesputselftexttoyouselfoftexttexton,textItexttexttexttextgo.\n"
-                f"textopen`Settings → texttexttexttexttexttext → useyouoftexttexttexttext(texttext)`,"
-                f"texttextyouselfopenit,putwanttextoftexttexttell me."
+                f"`{name_text}`texttimesputselftexttoyouselfoftexton,textItextgo.\n"
+                f"textopen`Settings → text → useyouoftext(text)`,"
+                f"textyouselfopenit,putwanttextoftexttell me."
             )
         self._dragged_back = True
         self._last_escape = "escaped"
@@ -3302,28 +3324,28 @@ class OrbitAgent:
         # running on another display says "skipped", not "ok".
         if any(step.kind == "macro" and str(step.detail).startswith("macro ok")
                for step in self.steps):
-            done.append("opentexttextpage")
+            done.append("opentextpage")
         elif any(step.kind == "vlm" and step.action == "macro" and step.detail == "ok"
                  for step in self.steps):
-            done.append("texttexttexttexttexttexttexttext")
+            done.append("text")
         if any(step.action == "launch" and step.detail == "ok" for step in self.steps):
             done.append("launchtext App")
         if any(step.action == "type" and step.detail == "ok" for step in self.steps):
-            done.append("inputtexttexttext")
+            done.append("inputtext")
         # A decomposed task does its work in subtasks, so the parent sees none
         # of the above: measured, a run that finished the NoteApp subtask and then
         # ran out of steps on the web one reported a bare failure.
         subtasks = [step for step in self.steps
                     if step.kind == "subtask" and str(step.detail).startswith("ok")]
         if subtasks:
-            done.append(f"done {len(subtasks)} texttexttext")
+            done.append(f"done {len(subtasks)} text")
         return done
 
     def _partial_answer(self, missing: str) -> str:
         done = self._achieved()
         if not done:
             return missing
-        return "dototexttext:" + ",".join(done) + "." + missing
+        return "dototext:" + ",".join(done) + "." + missing
 
     def _result(
         self,

@@ -120,7 +120,8 @@ object AdbShell {
     }
 
     /** Runs one command and returns its output together with the device banner. */
-    fun shell(certPem: ByteArray, keyPem: ByteArray, host: String, port: Int, command: String, timeoutMs: Int = 15000): String {
+    fun shell(certPem: ByteArray, keyPem: ByteArray, host: String, port: Int, command: String, timeoutMs: Int = 15000    ): String {
+        require(host == "127.0.0.1" || host == "localhost") { "adb shell is loopback only" }
         val (cert, key) = identity(certPem, keyPem)
         // build the context up front: adbd appears to time out quickly if the
         // ClientHello is late after STLS

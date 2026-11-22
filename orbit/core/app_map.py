@@ -84,7 +84,7 @@ def selected_texts_from_android_xml(xml_str: str) -> set[str]:
     """Labels of the nodes the app marks as selected -- a highlighted tab.
 
     A tab bar looks the same on every tab; which entry is selected is the only
-    thing that tells texttext from texttext, and it is not in ``text``/``content-desc``.
+    thing that tells text from text, and it is not in ``text``/``content-desc``.
     """
     texts: set[str] = set()
     for tag in re.finditer(r"<node\b([^>]*)>", xml_str):

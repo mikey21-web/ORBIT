@@ -13,7 +13,7 @@ Profile YAML format:
     - '^[\\d,]+$'                   # counts
   preserve_navigation:
     - "follow"  # tab, not dynamic
-    - "texttext"  # tab
+    - "text"  # tab
 """
 
 import json

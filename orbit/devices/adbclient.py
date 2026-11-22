@@ -288,6 +288,8 @@ class AdbClient:
 
     def connect(self, host: str, port: int) -> str:
         """Plain CNXN -> STLS -> TLS 1.3 -> device banner. Returns the banner."""
+        if host not in ("127.0.0.1", "localhost"):
+            raise ValueError("adb client connects to loopback only")
         # Remembered so a dead connection can be rebuilt: the TLS session to
         # adbd dies when the phone sleeps, when wireless debugging cycles, and
         # after a failed transfer, and every later command then fails with

@@ -121,8 +121,8 @@ _PROVIDERS = (
     ("openrouter", "OpenRouter"),
     ("openai", "OpenAI"),
     ("deepseek", "DeepSeek"),
-    ("dashscope", "texttexttexttexttext"),
-    ("aliyuncs", "texttexttexttexttext"),
+    ("dashscope", "text"),
+    ("aliyuncs", "text"),
     ("moonshot", "Moonshot"),
     ("google", "Google"),
     ("anthropic", "Anthropic"),
@@ -198,7 +198,7 @@ def summary(path: str, days: int = 7, now: float = 0.0) -> dict:
             dict(day=day, **counts) for day, counts in sorted(by_day.items(), reverse=True)
         ],
         # Top few of each, newest-by-spend first: the app shows the rest behind
-        # texttext, and an unbounded list is what made the page grow forever.
+        # text, and an unbounded list is what made the page grow forever.
         "by_model": [
             dict(model=model, **counts)
             for model, counts in sorted(
@@ -224,7 +224,7 @@ def format_report(data: dict) -> str:
     """A few lines a person can read in a dialog."""
     def line(label: str, counts: dict) -> str:
         return (f"{label}:{counts['calls']} timestextuse,"
-                f"input {counts['prompt']} / texttext {counts['completion']}"
+                f"input {counts['prompt']} / text {counts['completion']}"
                 f"(total {counts['total']})")
 
     out = [line("textdays", data.get("today") or _empty()),
@@ -232,13 +232,13 @@ def format_report(data: dict) -> str:
     models = data.get("by_model") or []
     if models:
         out.append("")
-        out.append("texttexttext:")
+        out.append("text:")
         for item in models[:6]:
             out.append(f"  {item['model']}  {item['total']}({item['calls']} times)")
     providers = data.get("by_provider") or []
     if len(providers) > 1:
         out.append("")
-        out.append("texttexttext:")
+        out.append("text:")
         for item in providers[:6]:
             out.append(f"  {item['provider']}  {item['total']}({item['calls']} times)")
     days = data.get("by_day") or []

@@ -1,3 +1,4 @@
+import logging
 # orbitcli  -  Coordinate-based phone agent with CLI abstraction layer.
 
 import os
@@ -39,7 +40,7 @@ def _load_dotenv(path: str = None):
                     if key and key not in os.environ:
                         os.environ[key] = value
         except Exception:
-            pass
+            logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
 
 # Auto-load .env on import (only sets vars that aren't already in the environment)

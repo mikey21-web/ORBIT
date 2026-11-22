@@ -32,7 +32,7 @@ app = Flask(__name__)
 
 
 class Config:
-    avd_log_dir = "/logs"  # texttexttexttexttexttexttexttexttexttexttext
+    avd_log_dir = "/logs"  # text
 
 
 class EmulatorController:

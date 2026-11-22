@@ -49,16 +49,16 @@ _KNOWN_SYSTEM = {
     'iphone storage', 'find my iphone', 'apple watch app',
     'transfer or reset iphone', 'erase this iphone',
     # Chinese
-    'search', 'Settings', 'notifications', 'texttext', 'texttext', 'Calendar', 'Clock',
-    'texttext', 'daystext', 'texttext', 'texttext', 'texttext', 'texttext', 'password',
-    'texttext', 'texttext', 'texttext', 'textuse', 'texttext', 'texttext', 'stilltext',
-    'texttext', 'Bluetooth', 'texttext', 'texttext', 'texttext', 'texttext', 'time',
-    'back', 'cancel', 'texttext', 'done', 'texttext', 'texttexttexttext',
-    'texttexttextusetime', 'texttext', 'texttext', 'texttexttext', 'texttextintext',
-    'texttexttexttext', 'texttexttext', 'texttexttexttext', 'texttexttexttext', 'wirelesstexttexttext',
-    'battery', 'texttext', 'texttext', 'texttext', 'texttext', 'familytexttext',
+    'search', 'Settings', 'notifications', 'text', 'text', 'Calendar', 'Clock',
+    'text', 'daystext', 'text', 'text', 'text', 'text', 'password',
+    'text', 'text', 'text', 'textuse', 'text', 'text', 'stilltext',
+    'text', 'Bluetooth', 'text', 'text', 'text', 'text', 'time',
+    'back', 'cancel', 'text', 'done', 'text', 'text',
+    'textusetime', 'text', 'text', 'text', 'textintext',
+    'text', 'text', 'text', 'text', 'wirelesstext',
+    'battery', 'text', 'text', 'text', 'text', 'familytext',
     # Keyboard/input
-    'texttextintext', 'texttextintext', 'texttext', 'texttext', 'texttext', 'texttext',
+    'textintext', 'textintext', 'text', 'text', 'text', 'text',
 }
 _KNOWN_SYSTEM_LOWER = {t.lower() for t in _KNOWN_SYSTEM}
 

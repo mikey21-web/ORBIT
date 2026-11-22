@@ -19,7 +19,10 @@ binary during development, the app's own adbd connection in the packaged app.
 
 from __future__ import annotations
 
+import logging
+
 import os
+import shlex
 import re
 import threading
 import time
@@ -159,13 +162,13 @@ class VirtualDisplayDevice(BaseDevice):
             if app not in ("", "unknown", "com.orbit.assistant"):
                 self._shell(f"am force-stop {app}")
         except Exception:
-            pass
+            logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
         try:
             if self._proc.is_alive():
                 self._proc.write_line("stop")
                 time.sleep(0.8)
         except Exception:
-            pass
+            logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
         finally:
             self._proc.terminate()
             self._proc = None
@@ -264,11 +267,12 @@ class VirtualDisplayDevice(BaseDevice):
             # files came out 0666, so a screenshot of the user's own screen sat
             # somewhere another app could read it. Lock it down, then remove it.
             path = "/data/local/tmp/pa-hands-off.png"
-            self._shell(f"screencap -p {path}; chmod 600 {path}")
+            target = shlex.quote(path)
+            self._shell(f"umask 077; screencap -p {target}")
             try:
                 data = self.transport.read_file(path)
             finally:
-                self._shell(f"rm -f {path}")
+                self._shell(f"rm -f {target}")
             if output_path:
                 with open(output_path, "wb") as fh:
                     fh.write(data)
@@ -704,7 +708,7 @@ class VirtualDisplayDevice(BaseDevice):
                 #  - it is a task of its own (MIUI's account centre), which a
                 #    force-stop clears;
                 #  - it sits on top of *this* app's task, because the app handed
-                #    the screen over (Settings hands texttexttexttext to com.android.phone).
+                #    the screen over (Settings hands text to com.android.phone).
                 #    The launcher activity is singleTask, so the relaunch is
                 #    delivered to that same task and nothing moves. Only a back
                 #    press unwinds it -- measured: back twice, launch works.

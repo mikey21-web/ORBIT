@@ -1700,7 +1700,7 @@ public class MainActivity extends Activity {
         final String[][] PROVIDERS = {
                 {"DeepSeek (official)", "https://api.deepseek.com/anthropic", "deepseek-flash"},
                 {"DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"},
-                {"OpenRouter", "https://openrouter.ai/api/v1", "qwen/qwen3.8-flash"},
+                {"OpenRouter", "https://openrouter.ai/api/v1", AgentConfig.DEFAULT_MODEL},
                 {"Zhipu", "https://open.bigmodel.cn/api/paas/v4", "glm-4v-flash"},
                 {"Cloud Model", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-vl-plus"},
                 {"SiliconFlow", "https://api.siliconflow.cn/v1", "Qwen/Qwen2.5-VL-72B-Instruct"},

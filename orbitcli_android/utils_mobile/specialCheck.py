@@ -1,3 +1,4 @@
+import logging
 import math
 import re
 from collections import deque
@@ -191,7 +192,7 @@ class MiniMapSpecialCheck:
                 parent.remove(list(parent)[delete_ind])
                 parent.remove(list(parent)[delete_ind])
             except Exception:
-                pass
+                logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
         if self.recycler_node.getparent() is not None:
             self.recycler_node.getparent().remove(self.recycler_node)
@@ -614,7 +615,7 @@ class FoodAppSpecialCheck:
             try:
                 parent.remove(list(parent)[delete_ind])
             except Exception:
-                pass
+                logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
     def get_search_base_node(self, node, page_type):
         page_criteria = {
@@ -661,7 +662,7 @@ class FoodAppSpecialCheck:
                 for child in list(parent)[delete_ind:]:
                     parent.remove(child)
             except Exception:
-                pass
+                logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
 
 SpecialCheck = {

@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 """ORBIT CLI  -  iOS phone agent command-line interface via WebDriverAgent (WDA).
 
@@ -512,7 +513,7 @@ def macro_auto_build(ctx, bundle_id, app_name, output, profile_dir, max_screens,
             with open(resume_from, "r") as f:
                 ck = json.load(f)
         except Exception:
-            pass
+            logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
         if not ck:
             _output(_err(f"Checkpoint not found or invalid: {resume_from}"))
             return
@@ -897,8 +898,8 @@ def vlm_verify(task, screenshot, api_key, api_base, model):
         if complete_match.start() < incomplete_match.start():
             msg = complete_match.group(1).strip()
             # Reject COMPLETE that describes an incomplete state
-            negations = ["texttext", "stilltext", "nodone", "not yet", "still need",
-                         "textdone", "need", "incomplete", "texttextto", "textnotto"]
+            negations = ["text", "stilltext", "nodone", "not yet", "still need",
+                         "textdone", "need", "incomplete", "textto", "textnotto"]
             if any(n in msg for n in negations):
                 _output(_ok(result="incomplete", reason=msg))
             else:
@@ -908,8 +909,8 @@ def vlm_verify(task, screenshot, api_key, api_base, model):
                         reason=incomplete_match.group(1).strip()))
     elif complete_match:
         msg = complete_match.group(1).strip()
-        negations = ["texttext", "stilltext", "nodone", "not yet", "still need",
-                     "textdone", "need", "incomplete", "texttextto", "textnotto"]
+        negations = ["text", "stilltext", "nodone", "not yet", "still need",
+                     "textdone", "need", "incomplete", "textto", "textnotto"]
         if any(n in msg for n in negations):
             _output(_ok(result="incomplete", reason=msg))
         else:

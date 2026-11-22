@@ -21,7 +21,7 @@ import yaml
 # PII patterns (same as build_map.py)
 _EMAIL_RE = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
 _PHONE_RE = re.compile(r'\+?\d[\d\s\xa0\-]{7,}')
-_PAYMENT_KEYS = ('texttexttext', 'alipay', 'paypal', 'texttexttexttext', 'apple pay', 'unionpay', 'texttexttext')
+_PAYMENT_KEYS = ('text', 'alipay', 'paypal', 'text', 'apple pay', 'unionpay', 'text')
 
 # Dynamic-content patterns (same as build_map.py _DYNAMIC_PATTERNS)
 _DYNAMIC_PATTERNS = [
@@ -42,9 +42,9 @@ _DYNAMIC_PATTERNS = [
     (re.compile(r'^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'), "UUID"),
     (re.compile(r'^[\d,]+$'), "count"),
     (re.compile(r'^\d+\s*/\s*\d+$'), "fraction"),
-    (re.compile(r'^\d+[\.\d]*\s*(km|m|mi|mile|texttext|text)$', re.I), "distance"),
-    (re.compile(r'^\d+\s*(minutes|texttext|days|text|text|text)text$'), "relative time"),
-    (re.compile(r'^\d+\s*(like|comment|favorite|share|texttext|looktext|texttext)$'), "stat"),
+    (re.compile(r'^\d+[\.\d]*\s*(km|m|mi|mile|text|text)$', re.I), "distance"),
+    (re.compile(r'^\d+\s*(minutes|text|days|text|text|text)text$'), "relative time"),
+    (re.compile(r'^\d+\s*(like|comment|favorite|share|text|looktext|text)$'), "stat"),
 ]
 
 
@@ -200,23 +200,23 @@ def _check_pii_leak(screens: list) -> list:
                                  "message": f"'{t}' in {s['id']} contains payment info"})
             elif 2 <= len(t) <= 5 and all('text' <= c <= 'text' for c in t):
                 # Chinese name candidate
-                skip = ("Settings", "texttext", "notifications", "textuse", "texttext", "texttext", "Calendar",
-                        "texttext", "Clock", "daystext", "texttext", "texttext", "texttext", "texttext",
-                        "texttext", "texttext", "texttext", "texttext", "texttext", "texttext", "texttext",
-                        "password", "Bluetooth", "wireless", "texttext", "texttext", "texttexttexttext",
-                        "family", "familytexttext", "texttext", "texttext", "text", "texttext",
-                        "texttext", "texttext", "texttext", "texttexttext", "texttexttext",
-                        "search", "texttext", "texttext", "texttext", "texttextID", "texttext",
-                        "texttext", "texttext", "texttext", "texttext", "texttext", "automatic",
-                        "texttext", "time", "texttext", "texttext", "stilltext", "texttext",
-                        "texttext", "texttexttexttext", "texttexttext", "familytext",
+                skip = ("Settings", "text", "notifications", "textuse", "text", "text", "Calendar",
+                        "text", "Clock", "daystext", "text", "text", "text", "text",
+                        "text", "text", "text", "text", "text", "text", "text",
+                        "password", "Bluetooth", "wireless", "text", "text", "text",
+                        "family", "familytext", "text", "text", "text", "text",
+                        "text", "text", "text", "text", "text",
+                        "search", "text", "text", "text", "textID", "text",
+                        "text", "text", "text", "text", "text", "automatic",
+                        "text", "time", "text", "text", "stilltext", "text",
+                        "text", "text", "text", "familytext",
                         # Common Chinese UI terms (filters, tabs, actions)
-                        "texttext", "texttext", "texttext", "texttext", "texttext", "texttext",
-                        "textlooktexttext", "texttexttexttext", "texttext", "texttexttexttext", "texttexttexttext",
-                        "texttexttexttext", "texttexttexttext", "texttexttexttexttext", "texttexttextto",
-                        "texttexttexttext", "texttexttexttext", "Ioftexttext", "Ioffavorite",
-                        "texttexttexttext", "searchtexttext", "texttext", "texttext", "texttext",
-                        "texttext", "texttext", "texttext", "texttext")
+                        "text", "text", "text", "text", "text", "text",
+                        "textlooktext", "text", "text", "text", "text",
+                        "text", "text", "text", "textto",
+                        "text", "text", "Ioftext", "Ioffavorite",
+                        "text", "searchtext", "text", "text", "text",
+                        "text", "text", "text", "text")
                 if t not in skip:
                     warnings.append({"code": "pii_name",
                                      "message": f"'{t}' in {s['id']} looks like a Chinese name"})

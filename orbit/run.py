@@ -13,6 +13,8 @@ falls back to the GUI loop when routing or verification fails.
 
 from __future__ import annotations
 
+from .core.llm import DEFAULT_MODEL
+
 import argparse
 import sys
 
@@ -31,7 +33,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--task", "-t", required=True)
     parser.add_argument("--api-key", required=True)
     parser.add_argument("--api-base", default="https://openrouter.ai/api/v1")
-    parser.add_argument("--model", default="qwen/qwen3.8-flash")
+    parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--max-rounds", type=int, default=12)
     parser.add_argument("--no-verify", action="store_true", help="skip the VLM verification call")
     parser.add_argument("--no-macro", action="store_true", help="skip routing, go straight to the GUI loop")

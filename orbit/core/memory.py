@@ -61,7 +61,7 @@ _SECRET_WORDS = (
 _DIGIT_WORDS = ("pin", "otp")
 
 #: Explicitly allowed: these are facts a phone assistant needs, not credentials.
-_ALLOWED_FACTS = ("phone number", "texttext", "address", "birthday", "family", "title", "shipping")
+_ALLOWED_FACTS = ("phone number", "text", "address", "birthday", "family", "title", "shipping")
 
 
 def is_sensitive(text: str) -> bool:

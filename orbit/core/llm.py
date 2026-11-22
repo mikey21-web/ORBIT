@@ -20,6 +20,8 @@ from typing import Iterable, Optional, Protocol, runtime_checkable
 
 import requests
 
+DEFAULT_MODEL = "qwen/qwen3.8-flash"
+
 
 @dataclass
 class ToolCall:

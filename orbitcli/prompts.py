@@ -136,7 +136,7 @@ DYNAMIC|element text
 
 Example:
 STABLE|Following
-DYNAMIC|IatXonalsoishave1.1texttextlooktext
+DYNAMIC|IatXonalsoishave1.1textlooktext
 STABLE|Home
 STABLE|Search
 
@@ -289,9 +289,9 @@ Python regex patterns matching elements that are clearly dynamic content. Use ^.
 - For UUID strings like "F27B271D-BBA6-4579-AE69-FD17E446C660": "^[0-9A-F]{{8}}-[0-9A-F]{{4}}-[0-9A-F]{{4}}-[0-9A-F]{{4}}-[0-9A-F]{{12}}$" (case-insensitive)
 - For like/comment counts like "1,159" "9,918": "^[\\d,]+$"
 - For image indicators like "1/2" "3/4": "^\\d+/\\d+$"
-- For distance like "1.8km": "^\\d+[.\\d]*\\s*(km|m|mi|texttext|text)$"
-- For relative time like "3hours ago": "^\\d+\\s*(minutes|texttext|days)text$"
-- For stat labels like "8,648 like": "^[\\d,]+\\s*(like|comment|favorite|texttext|looktext)$"
+- For distance like "1.8km": "^\\d+[.\\d]*\\s*(km|m|mi|text|text)$"
+- For relative time like "3hours ago": "^\\d+\\s*(minutes|text|days)text$"
+- For stat labels like "8,648 like": "^[\\d,]+\\s*(like|comment|favorite|text|looktext)$"
 - For user handles like "@username": "^@\\w+$"
 - For hashtags like "#topic": "^#\\S+$"
 - For price like "¥199": "^[¥$]\\d+[.\\d]*$"
@@ -303,7 +303,7 @@ CRITICAL: Only output a pattern if the element list contains AT LEAST 3 instance
 
 ## preserve_navigation
 Elements that look like they might be dynamic (e.g. short text, could match some patterns) but are actually fixed navigation UI that must be kept. These elements will NEVER be filtered, even if they match a dynamic pattern. Typically includes:
-- Tab bar items (e.g. "Home", "Search", "Profile", "home", "texttext")
+- Tab bar items (e.g. "Home", "Search", "Profile", "home", "text")
 - Navigation menu items
 - Fixed category selectors
 
@@ -326,12 +326,12 @@ SANITIZE_CLASSIFY_PROMPT = """You are a privacy auditor reviewing a mobile app m
 Context for each item includes the screen description(s) where it appears  -  use this to distinguish personal data from system UI labels.
 
 ## Classifications
-- name:      A person's name (e.g. "texttext", "Alex")
+- name:      A person's name (e.g. "text", "Alex")
 - email:     An email address
 - phone:     A phone number
 - device:    A specific device model or personal device name (e.g. "iPad (2)", "iPhone 17 Pro")
 - app:       A specific app name installed on the device (e.g. "ChatApp", "NoteApp")
-- region:    A geographic region or carrier reflecting user settings (e.g. "texttext", "intexttexttext")
+- region:    A geographic region or carrier reflecting user settings (e.g. "text", "intext")
 - account:   An account identifier or username
 - skip:      A system UI label, settings option, or fixed navigation  -  NOT personal data
 

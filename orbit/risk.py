@@ -109,7 +109,7 @@ def describe(path: str, package: str) -> str:
         return ""
     minutes = int((time.time() - last) // 60)
     when = f"{minutes} minutes ago" if minutes < 120 else f"{minutes // 60} hours ago"
-    return f"this App {when}showed a security check(step {count} times)"
+    return f"This app {when} showed a security check (step {count} times)"
 
 
 def _owner_only(path: str) -> None:

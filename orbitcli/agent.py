@@ -1,3 +1,4 @@
+import logging
 """Agent loop orchestrator  -  coordinates CLI calls for task execution.
 
 Architecture (Approach A  -  thin CLI):
@@ -295,10 +296,10 @@ class OrbitAgent:
                         try:
                             requests.get(f"{base}/status", timeout=5)
                         except Exception:
-                            pass
+                            logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
                     return
             except Exception:
-                pass
+                logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
             # Fallback: safe status-bar swipe
             from orbitcli.device import get_screen_size, swipe
             for retry in range(5):
@@ -311,7 +312,7 @@ class OrbitAgent:
                             swipe(5, sy, 15, sy, duration_ms=100,
                                   wda_url=wda_url, session_id=session_id)
                         except Exception:
-                            pass
+                            logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
                     return
                 except Exception:
                     if retry < 4:
@@ -605,10 +606,10 @@ class OrbitAgent:
 
         # Auto-upgrade to MACRO_VLM when task requires content interaction
         # and LLM returned a terminal OP instead of MACRO_VLM.
-        # Example: "searchBluetoothtexttext" matched "home→search→texttext" but the macro
+        # Example: "searchBluetoothtext" matched "home→search→text" but the macro
         # only navigates  -  VLM must type the query and read results.
-        _INPUT_HINTS = ["search", "texttext", "input", "search", "find", "type",
-                        "text", "texttext", "text", "texttext", "texttext"]
+        _INPUT_HINTS = ["search", "text", "input", "search", "find", "type",
+                        "text", "text", "text", "text", "text"]
         _task_needs_input = any(kw in task.lower() for kw in _INPUT_HINTS)
         if op_info and _task_needs_input and op_info[1] not in ("NAV",) and not op_info[2]:
             print(f"[Agent] Task needs content input  -  upgrading OP to MACRO_VLM")
@@ -810,7 +811,7 @@ class OrbitAgent:
                     self.state.app_name = cur_app_name
                     print(f"[Agent] Foreground app: {cur_app_name} ({cur_bundle})")
         except Exception:
-            pass
+            logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
         # Screen identification via XML  -  only match map belonging to current foreground app
         screen_hint = ""
@@ -840,7 +841,7 @@ class OrbitAgent:
                     print(f"[Agent] Screen [{best_am.app_name}]: {best_sid} "
                           f"({best_conf:.0%}), nav: {targets}")
             except Exception:
-                pass
+                logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
         # Loop detection  -  compare by action type, not exact coords
         if len(self.state.history) >= 3:
@@ -947,13 +948,13 @@ class OrbitAgent:
                     try:
                         os.remove(post_action_ss)
                     except Exception:
-                        pass
+                        logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
                 else:
                     # Replace pre-action screenshot for next round comparison
                     try:
                         os.replace(post_action_ss, pre_action_ss)
                     except Exception:
-                        pass
+                        logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
     # ------------------------------------------------------------------
     # Action execution

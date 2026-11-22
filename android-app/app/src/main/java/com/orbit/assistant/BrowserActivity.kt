@@ -2,6 +2,7 @@ package com.orbit.assistant
 
 import android.app.Activity
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.view.ViewGroup
@@ -28,7 +29,9 @@ class BrowserActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val url = intent?.getStringExtra("url") ?: "https://example.com"
+        val requested = intent?.getStringExtra("url") ?: "https://example.com"
+        val parsed = Uri.parse(requested)
+        val url = if (parsed.scheme == "http" || parsed.scheme == "https") requested else "https://example.com"
         val desktop = intent?.getBooleanExtra("desktop", true) ?: true
 
         val view = WebView(this)
@@ -43,6 +46,11 @@ class BrowserActivity : Activity() {
             // further.
             @SuppressLint("SetJavaScriptEnabled")
             javaScriptEnabled = true
+            allowFileAccess = false
+            allowContentAccess = false
+            allowFileAccessFromFileURLs = false
+            allowUniversalAccessFromFileURLs = false
+            mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_NEVER_ALLOW
             domStorageEnabled = true
             loadsImagesAutomatically = true
             useWideViewPort = true

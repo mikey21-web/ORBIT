@@ -1,3 +1,4 @@
+import logging
 """App map builder  -  crawl an iOS app via WDA and generate a YAML app map.
 
 Algorithm: BFS crawl from screen_0.
@@ -93,7 +94,7 @@ def _get_screen_size_wda(wda_url: str, session_id: str) -> tuple:
             v = r.json().get("value", {})
             return v.get("width", 390), v.get("height", 844)
     except Exception:
-        pass
+        logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
     return 390, 844
 
 
@@ -124,10 +125,10 @@ def _start_keepalive(wda_url: str, session_id: str, interval: int = 30):
                     try:
                         requests.get(f"{base}/status", timeout=5)
                     except Exception:
-                        pass
+                        logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
                 return
         except Exception:
-            pass
+            logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
         # Fallback: safe status-bar swipe (won't trigger UI elements)
         print(f"[Keepalive] Falling back to safe swipe (every {interval}s)")
@@ -137,7 +138,7 @@ def _start_keepalive(wda_url: str, session_id: str, interval: int = 30):
             try:
                 _wda_swipe(5, sy, 15, sy, wda_url, session_id)
             except Exception:
-                pass
+                logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
     t = threading.Thread(target=_loop, daemon=True)
     t.start()
@@ -211,9 +212,9 @@ _DYNAMIC_PATTERNS = [
     r'^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$',  # UUID
     r'^[\d,]+$',               # comma-separated counts: 1,159 / 5,408
     r'^\d+\s*/\s*\d+$',         # image carousel: 1/2, 3/4
-    r'^\d+[\.\d]*\s*(km|m|mi|mile|texttext|text)$',  # distance: 1.8km, 500m
-    r'^\d+\s*(minutes|texttext|days|text|text|text)text$',       # Chinese relative time
-    r'^\d+\s*(like|comment|favorite|share|texttext|looktext|texttext)$',  # Chinese stat labels
+    r'^\d+[\.\d]*\s*(km|m|mi|mile|text|text)$',  # distance: 1.8km, 500m
+    r'^\d+\s*(minutes|text|days|text|text|text)text$',       # Chinese relative time
+    r'^\d+\s*(like|comment|favorite|share|text|looktext|text)$',  # Chinese stat labels
 ]
 
 SKIP_TEXTS = {
@@ -268,7 +269,7 @@ def _build_signature(elements: list[dict], max_items: int = 10,
 # Patterns to detect personal screens
 _EMAIL_RE = re.compile(r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}')
 _PHONE_RE = re.compile(r'\+?\d[\d\s\xa0\-]{7,}')
-_PAYMENT_KEYS = ('texttexttext', 'alipay', 'paypal', 'texttexttexttext', 'apple pay', 'unionpay', 'texttexttext')
+_PAYMENT_KEYS = ('text', 'alipay', 'paypal', 'text', 'apple pay', 'unionpay', 'text')
 _DEVICE_RE = re.compile(r'.{1,5}of\s*(Apple\s*Watch|iPhone|iPad|Mac|AirPods|HomePod)')
 
 
@@ -321,16 +322,16 @@ def _redact_screens(screens: list[dict]) -> list[dict]:
             elif 2 <= len(t) <= 5 and 'text' <= t[0] <= 'text' and all('text' <= c <= 'text' for c in t):
                 # Chinese name candidate  -  collect for global replacement
                 # Skip known system labels
-                skip = ("Settings", "texttext", "notifications", "textuse", "texttext", "texttext", "Calendar",
-                        "texttext", "Clock", "daystext", "texttext", "texttext", "texttext", "texttext",
-                        "texttext", "texttext", "texttext", "texttext", "texttext", "texttext", "texttext",
-                        "password", "Bluetooth", "wireless", "texttext", "texttext", "texttexttexttext",
-                        "family", "familytexttext", "texttext", "texttext", "text", "texttext",
-                        "texttext", "texttext", "texttext", "texttexttext", "texttexttext",
-                        "search", "texttext", "texttext", "texttext", "texttextID", "texttext",
-                        "texttext", "texttext", "texttext", "texttext", "texttext", "automatic",
-                        "texttext", "time", "texttext", "texttext", "stilltext", "texttext",
-                        "texttext", "texttexttexttext")
+                skip = ("Settings", "text", "notifications", "textuse", "text", "text", "Calendar",
+                        "text", "Clock", "daystext", "text", "text", "text", "text",
+                        "text", "text", "text", "text", "text", "text", "text",
+                        "password", "Bluetooth", "wireless", "text", "text", "text",
+                        "family", "familytext", "text", "text", "text", "text",
+                        "text", "text", "text", "text", "text",
+                        "search", "text", "text", "text", "textID", "text",
+                        "text", "text", "text", "text", "text", "automatic",
+                        "text", "time", "text", "text", "stilltext", "text",
+                        "text", "text")
                 if t not in skip:
                     names.add(t)
 
@@ -338,7 +339,7 @@ def _redact_screens(screens: list[dict]) -> list[dict]:
     def _is_name_match(text: str) -> bool:
         if text in names:
             return True
-        # e.g. "texttexttext (You)" matches base name "texttexttext"
+        # e.g. "text (You)" matches base name "text"
         for name in names:
             if text.startswith(name):
                 return True

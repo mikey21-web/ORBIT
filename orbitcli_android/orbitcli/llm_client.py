@@ -5,6 +5,8 @@
 # annotations strings on every version.
 from __future__ import annotations
 
+import logging
+
 import base64
 import sys
 from typing import Optional
@@ -35,7 +37,7 @@ def _record_usage(response, label: str = ""):
             label=label,
         )
     except Exception:
-        pass
+        logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
 
 def text_completion(

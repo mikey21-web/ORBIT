@@ -1,0 +1,2 @@
+-keep class com.orbit.assistant.** { *; }
+-keepattributes *Annotation*

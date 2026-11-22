@@ -5,9 +5,9 @@ to be on screen, so on a personal phone the map bakes in the account name, the
 Wi-Fi SSID and the device model:
 
     alex
-    alexofREDMI K90 Ultra
+    nameofDeviceModel
     phone number:181****8488
-    1101,texttexttext,WLAN texttexttexttexttexttexttext.
+    1101,text,WLAN text.
 
 None of that is navigation -- it is one phone's data. A profile names it so the
 map stays device-independent:
@@ -22,6 +22,8 @@ heuristics when no key is configured.
 """
 
 from __future__ import annotations
+
+from .llm import DEFAULT_MODEL
 
 import argparse
 import json
@@ -261,7 +263,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--out", default="", help="write the sanitized map here (default: in place)")
     parser.add_argument("--api-key", default="", help="enable the LLM profile with this key")
     parser.add_argument("--api-base", default="https://openrouter.ai/api/v1")
-    parser.add_argument("--model", default="qwen/qwen3.8-flash")
+    parser.add_argument("--model", default=DEFAULT_MODEL)
     args = parser.parse_args(argv)
 
     with open(args.map, encoding="utf-8") as fh:

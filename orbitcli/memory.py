@@ -17,6 +17,8 @@ UserMemory
 
 from __future__ import annotations
 
+import logging
+
 import json
 import os
 import re
@@ -218,7 +220,7 @@ class UserMemory:
                     os.rename(str(self.path), backup)
                     print(f"[Memory] Corrupt profile backed up to: {backup}")
                 except Exception:
-                    pass
+                    logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
                 print(f"[Memory] Warning: could not load profile ({exc}). Starting fresh.")
         return self._empty_profile()
 

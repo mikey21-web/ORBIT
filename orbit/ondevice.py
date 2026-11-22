@@ -8,6 +8,8 @@ is in the loop.
 
 from __future__ import annotations
 
+from .core.llm import DEFAULT_MODEL
+
 import glob
 from dataclasses import dataclass
 from typing import Optional
@@ -412,7 +414,7 @@ def serve(
     port: int = 8765,
     api_key: str = "",
     api_base: str = "https://openrouter.ai/api/v1",
-    model: str = "qwen/qwen3.8-flash",
+    model: str = DEFAULT_MODEL,
     vision_model: str = "",
     mock: str = "",
     maps_dir: str = "",

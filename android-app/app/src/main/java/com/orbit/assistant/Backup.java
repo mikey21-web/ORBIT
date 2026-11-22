@@ -1,12 +1,8 @@
 package com.orbit.assistant;
 
-import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.util.Log;
 
 import org.json.JSONObject;
@@ -55,21 +51,12 @@ final class Backup {
         String name = "ORBIT-backup-" + stamp + ".zip";
         byte[] zip = buildZip(context);
 
-        ContentValues values = new ContentValues();
-        values.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
-        values.put(MediaStore.MediaColumns.MIME_TYPE, "application/zip");
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            values.put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+        File targetDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (targetDir == null) {
+            throw new IOException("cannot open the app's backup directory");
         }
-        ContentResolver resolver = context.getContentResolver();
-        Uri target = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
-        if (target == null) {
-            throw new IOException("cannot create the file in Downloads");
-        }
-        try (OutputStream out = resolver.openOutputStream(target)) {
-            if (out == null) {
-                throw new IOException("cannot open the backup file");
-            }
+        File target = new File(targetDir, name);
+        try (OutputStream out = new FileOutputStream(target)) {
             out.write(zip);
         }
         Log.i(TAG, "exported " + name + " (" + zip.length + " bytes)");

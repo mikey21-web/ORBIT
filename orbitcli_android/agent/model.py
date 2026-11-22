@@ -1,3 +1,4 @@
+import logging
 from typing import List, Dict, Any
 
 import backoff
@@ -113,7 +114,7 @@ class OpenAIAgent(Agent):
                 label="agent_vlm" if has_image else "agent_text",
             )
         except Exception:
-            pass
+            logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
         return content
 

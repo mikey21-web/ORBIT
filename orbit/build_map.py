@@ -26,6 +26,8 @@ Safety rails
 
 from __future__ import annotations
 
+import logging
+
 import argparse
 import importlib.util
 import os
@@ -890,7 +892,7 @@ MIN_SCREEN_ELEMENTS = 4
 CONSEQUENTIAL = re.compile(
     r"(create|create|add|delete|remove|clear|clear|reset|format|uninstall|factory reset"
     r"|install|update all|update now|upgrade"
-    r"|confirm|save|submit|send|dial|call|texttext|texttext|downtext|texttext"
+    r"|confirm|save|submit|send|dial|call|text|text|downtext|text"
     r"|take photo|record video|record audio"
     r"|start|launch|power off|reboot|log out|log out|unbind|unpair"
     # Social actions. A crawl tapping these edits the user's own account:
@@ -1266,9 +1268,9 @@ def _crawl_verified(bm, controller, device, package, app_name, output_path,
             continue
 
         # A screen is recorded from one dump, and a dump catches whatever is
-        # passing through: a "texttextdone" toast, a spinner label. Those texts are
+        # passing through: a "textdone" toast, a spinner label. Those texts are
         # gone a second later, so a map built from them can never match again
-        # (a file-manager map kept "texttextdone" and then identified nothing).
+        # (a file-manager map kept "textdone" and then identified nothing).
         # Take a second dump and keep only what is on both.
         selected_new: list = []
         try:
@@ -1892,7 +1894,7 @@ def main(
                 if candidate not in terms:
                     terms.append(candidate)
         except Exception:
-            pass
+            logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
         public = str(Path(output).with_suffix(".public.yaml"))
         report = redact_map(output, terms, out=public)
         print(f"redact : {report['elements']} elements -> {public} "

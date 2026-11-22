@@ -17,6 +17,10 @@ agents tapping at once would fight over the same screen.
 
 from __future__ import annotations
 
+from .core.llm import DEFAULT_MODEL
+
+import logging
+
 import argparse
 import base64
 import faulthandler
@@ -27,6 +31,13 @@ import re
 import threading
 import time
 import uuid
+
+MAX_BODY = 1024 * 1024
+DEBUG_ENDPOINTS = os.environ.get("ORBIT_DEBUG_ENDPOINTS") == "1"
+
+
+class BodyTooLarge(Exception):
+    pass
 from dataclasses import dataclass, field
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Callable, Optional
@@ -124,7 +135,7 @@ class ServerConfig:
     #: map -- screens and elements, no descriptions and no aliases.
     llm_api_key: str = ""
     llm_api_base: str = "https://openrouter.ai/api/v1"
-    llm_model: str = "qwen/qwen3.8-flash"
+    llm_model: str = DEFAULT_MODEL
     #: A task that produces no new step for this long is treated as stuck:
     #: its traceback is dumped and the task is failed instead of sitting in
     #: "running" until the app is killed.
@@ -595,7 +606,7 @@ def _run(task_id: str, text: str, config: ServerConfig,
                 try:
                     device.stop()
                 except Exception:
-                    pass
+                    logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
 
 
 #: The app this server runs in; it must end up in front.
@@ -750,7 +761,7 @@ def _crawl_run(crawl_id: str, argv: list[str], device, crawl: dict, recover=None
                                 f"note:new map {len(fresh.screens)} text,"
                                 f"currently in use is {os.path.basename(winner[0])}"
                                 f"({len(winner[1].screens)} text) -  - "
-                                "replace with the new one,to`installed maps`texttextit`texttexttextusethistext`"
+                                "replace with the new one,to`installed maps`textit`textusethistext`"
                             )
             except Exception:  # noqa: BLE001 - a note is optional
                 pass
@@ -859,7 +870,7 @@ class Handler(BaseHTTPRequestHandler):
         config = self.server.config  # type: ignore[attr-defined]
         if not config.crawl_dir:
             return self._send(503, {"error": "crawling is disabled"})
-        length = int(self.headers.get("Content-Length", 0))
+        length = self._body_length()
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
@@ -879,8 +890,8 @@ class Handler(BaseHTTPRequestHandler):
         left = pacing_mod.remaining(config.pacing_path, package)
         if left > 0:
             commercial = pacing_mod.is_commercial(package)
-            reason = ("textminutestexttexttexttexttexttexttimes,textistexttextwanttextoftexttext"
-                      if commercial else "texttexttext,textwaittextdownagaincome")
+            reason = ("textminutestexttimes,textistextwanttextoftext"
+                      if commercial else "text,textwaittextdownagaincome")
             return self._send(429, {
                 "error": f"this App {reason},stillwantwait {int(left // 60) + 1} minutes.",
                 "retry_after": int(left),
@@ -933,7 +944,7 @@ class Handler(BaseHTTPRequestHandler):
         Switching provider used to be trial and error: the first feedback was a
         whole task failing with HTTP 401 somewhere in the log.
         """
-        length = int(self.headers.get("Content-Length", 0) or 0)
+        length = self._body_length()
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
@@ -950,14 +961,14 @@ class Handler(BaseHTTPRequestHandler):
             # the base URL, and a connection test that speaks the wrong one
             # reports a 404 from a perfectly good endpoint.
             client = make_llm(api_key, api_base, model, vision)
-            reply = client.text("", "textonlyreplytexttext:textuse")
+            reply = client.text("", "textonlyreplytext:textuse")
         except Exception as exc:  # noqa: BLE001 - reported to the settings dialog
             return self._send(200, {"ok": False, "detail": f"{type(exc).__name__}: {exc}"})
         return self._send(200, {"ok": True, "detail": str(reply)[:80] or "(textreply)"})
 
     def _drain_body(self) -> None:
         """Read and discard a request body so the connection stays usable."""
-        length = int(self.headers.get("Content-Length", 0) or 0)
+        length = self._body_length()
         if length:
             self.rfile.read(length)
 
@@ -1039,7 +1050,7 @@ class Handler(BaseHTTPRequestHandler):
     def _debug_type(self) -> None:
         """POST /type {"text": "...", "display": 0} -- exercise the input path."""
         config = self.server.config  # type: ignore[attr-defined]
-        length = int(self.headers.get("Content-Length", 0))
+        length = self._body_length()
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
@@ -1057,7 +1068,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _start_bench(self) -> None:
         config = self.server.config  # type: ignore[attr-defined]
-        length = int(self.headers.get("Content-Length", 0))
+        length = self._body_length()
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
@@ -1108,6 +1119,8 @@ class Handler(BaseHTTPRequestHandler):
             handler()
         except (BrokenPipeError, ConnectionResetError):
             return                       # the client went away; nothing to say
+        except BodyTooLarge as exc:
+            return self._send(413, {"error": str(exc)})
         except Exception as exc:          # noqa: BLE001 - that is the point
             import traceback
 
@@ -1117,17 +1130,25 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:             # noqa: BLE001 - headers may be out already
                 pass
 
-    def _authorized(self, token: str) -> bool:
-        """Header (the app) or query parameter (curl during development)."""
-        supplied = self.headers.get("X-Agent-Token", "")
-        if not supplied:
-            from urllib.parse import parse_qs, urlparse
+    def _body_length(self) -> int:
+        raw = self.headers.get("Content-Length", "0")
+        try:
+            length = int(raw)
+        except (TypeError, ValueError):
+            raise BodyTooLarge("invalid Content-Length")
+        if length < 0 or length > MAX_BODY:
+            raise BodyTooLarge("request body too large")
+        return length
 
-            supplied = (parse_qs(urlparse(self.path).query).get("token") or [""])[0]
+    def _authorized(self, token: str) -> bool:
+        """Only the app header is accepted; URLs must not carry the token."""
+        supplied = self.headers.get("X-Agent-Token", "")
         return hmac.compare_digest(str(supplied), token)
 
     def _post(self):
         parts = self.path.strip("/").split("/")
+        if parts == ["debug", "spill"] and not DEBUG_ENDPOINTS:
+            return self._send(404, {"error": "not found"})
         if parts == ["debug", "spill"]:
             # Test hook, not a feature: move a package's task from the agent's
             # display to the phone's, which is what some apps do to themselves
@@ -1136,7 +1157,7 @@ class Handler(BaseHTTPRequestHandler):
             # waiting for an app to escape during a task. Same token as every
             # other endpoint, and it only moves a task between displays.
             config = self.server.config  # type: ignore[attr-defined]
-            length = int(self.headers.get("Content-Length", 0))
+            length = self._body_length()
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
@@ -1175,7 +1196,7 @@ class Handler(BaseHTTPRequestHandler):
             from . import risk as risk_mod
 
             config = self.server.config  # type: ignore[attr-defined]
-            length = int(self.headers.get("Content-Length", 0))
+            length = self._body_length()
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
@@ -1196,7 +1217,7 @@ class Handler(BaseHTTPRequestHandler):
             from .map_pins import load_pins, save_pins
 
             config = self.server.config  # type: ignore[attr-defined]
-            length = int(self.headers.get("Content-Length", 0))
+            length = self._body_length()
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
@@ -1214,7 +1235,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if parts == ["maps", "delete"]:
             config = self.server.config  # type: ignore[attr-defined]
-            length = int(self.headers.get("Content-Length", 0))
+            length = self._body_length()
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
@@ -1271,7 +1292,7 @@ class Handler(BaseHTTPRequestHandler):
             slot = PENDING.get(parts[1])
             if slot is None:
                 return self._send(404, {"error": "unknown or finished task"})
-            length = int(self.headers.get("Content-Length", 0))
+            length = self._body_length()
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
@@ -1281,7 +1302,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"ok": True})
         if not self.path.startswith("/task"):
             return self._send(404, {"error": "not found"})
-        length = int(self.headers.get("Content-Length", 0))
+        length = self._body_length()
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
@@ -1309,7 +1330,7 @@ class Handler(BaseHTTPRequestHandler):
         config = self.server.config  # type: ignore[attr-defined]
         hands_off = bool(body.get("display") == 0) if "display" in body else False
         if hands_off and config.hands_off_factory is None:
-            return self._send(400, {"error": "managed modenottextuse(texttextnottexttext)"})
+            return self._send(400, {"error": "managed modenottextuse(textnottext)"})
         _update(task_id, hands_off=hands_off)
         threading.Thread(target=_run, args=(task_id, text, config, hands_off),
                          daemon=True).start()
@@ -1318,6 +1339,8 @@ class Handler(BaseHTTPRequestHandler):
     def _get(self):
         path, _, query = self.path.partition("?")
         parts = path.strip("/").split("/")
+        if parts == ["dump"] and not DEBUG_ENDPOINTS:
+            return self._send(404, {"error": "not found"})
         if parts == ["web"]:
             # Debug surface for the page the app hosts: text, links, title.
             from .web import WebPage
@@ -1350,7 +1373,7 @@ class Handler(BaseHTTPRequestHandler):
             # a screenshot until a field takes the text, and Chinese goes through
             # a different route than ASCII.
             config = self.server.config  # type: ignore[attr-defined]
-            length = int(self.headers.get("Content-Length", 0))
+            length = self._body_length()
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
@@ -1556,7 +1579,7 @@ def start_server(port: int, config: ServerConfig) -> ThreadingHTTPServer:
 def make_llm(
     api_key: str,
     api_base: str = "https://openrouter.ai/api/v1",
-    model: str = "qwen/qwen3.8-flash",
+    model: str = DEFAULT_MODEL,
     vision_model: str = "",
     mock: str = "",
     usage_path: str = "",
@@ -1602,7 +1625,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--api-key", default=os.environ.get("OPENROUTER_API_KEY", ""))
     parser.add_argument("--api-base", default="https://openrouter.ai/api/v1")
-    parser.add_argument("--model", default="qwen/qwen3.8-flash")
+    parser.add_argument("--model", default=DEFAULT_MODEL)
     parser.add_argument("--start-app", default="com.android.settings",
                         help="app to put on the fresh virtual display so it has a frame")
     args = parser.parse_args(argv)

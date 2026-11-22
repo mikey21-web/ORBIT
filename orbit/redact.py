@@ -5,8 +5,8 @@ includes the account name, a masked phone number and the device name. The iOS
 side has ``sanitize_map.py`` for this; the Android path had nothing, so maps
 could not be shared or committed.
 
-    python3 -m orbit.redact --map orbit/maps/k90.yaml --auto
-    python3 -m orbit.redact --map m.yaml --term alex --term "REDMI K90"
+    python3 -m orbit.redact --map orbit/maps/device.yaml --auto
+    python3 -m orbit.redact --map m.yaml --term name --term "Device Model"
 
 Redaction is conservative: only the matched substring is replaced, so
 "phone number:181****8488" becomes "phone number:<phone>" and the row still reads like a
@@ -16,6 +16,8 @@ anchor (it falls back to the recorded coordinates).
 """
 
 from __future__ import annotations
+
+import logging
 
 import argparse
 import re
@@ -38,7 +40,7 @@ def auto_terms(device=None) -> list[str]:
     """Device-derived strings that are almost always personal.
 
     ``settings get global device_name`` on HyperOS returns something like
-    "aliceofREDMI K90 Ultra"; the part before of is the account name, which
+    "nameofDeviceModel"; the part before of is the account name, which
     also shows up on its own as a settings row.
     """
     terms: list[str] = []
@@ -53,13 +55,13 @@ def auto_terms(device=None) -> list[str]:
                 if len(prefix) >= 3:
                     terms.append(prefix)
     except Exception:
-        pass
+        logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
     try:
         model = device.info().model
         if model:
             terms.append(model)
     except Exception:
-        pass
+        logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
     return [t for t in terms if t]
 
 
@@ -80,7 +82,7 @@ def name_candidates(texts: Iterable[str], terms: Iterable[str]) -> list[str]:
 
 def _redact_text(text: str, terms: Iterable[str]) -> tuple[str, bool]:
     original = text
-    # A label that mentions the device name at all ("aliceofREDMI K90 Ultra") is
+    # A label that mentions the device name at all ("nameofDeviceModel") is
     # personal in its entirety: replacing only the model would leave the name.
     if any(term and term in text for term in terms):
         return PERSONAL_TOKEN, True
