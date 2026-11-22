@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #f5f4ef;
+  --surface: #fffefa;
+  --raised: #ebe9e2;
+  --line: rgba(31, 30, 29, 0.12);
+  --linen: #1f1e1d;
+  --muted: #45423d;
+  --faint: #6b665e;
+  --persimmon: #d97757;
+  --teal: #2f7d72;
+  --sage: #6f8c3f;
+  --danger: #c33f2e;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ink);
+  color: var(--linen);
+  font-family: "DM Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(760px 420px at 82% -10%, rgba(217, 119, 87, 0.08), transparent 70%),
+    radial-gradient(620px 460px at 0% 100%, rgba(47, 125, 114, 0.06), transparent 70%);
+  z-index: 0;
+}
+
+::selection { background: rgba(232, 100, 60, 0.35); }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-thumb { background: #c9bfae; border-radius: 99px; border: 2px solid var(--ink); }
+
+@layer components {
+  .field {
+    @apply w-full rounded-xl border border-line bg-ink/70 px-3 py-2.5 text-sm text-linen outline-none transition-colors placeholder:text-faint focus:border-persimmon/60;
+  }
+  .label {
+    @apply font-mono text-[10px] uppercase tracking-[0.22em] text-faint;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm text-muted transition-colors hover:bg-raised hover:text-linen;
+  }
+}
+
+.typing span {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 4px;
+  border-radius: 99px;
+  background: var(--faint);
+  animation: bounce 1.2s infinite ease-in-out;
+}
+.typing span:nth-child(2) { animation-delay: 0.15s; }
+.typing span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+
+.fade-in { animation: fadeIn 0.35s cubic-bezier(0.22,1,0.36,1) both; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
