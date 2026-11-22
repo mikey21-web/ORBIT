@@ -147,7 +147,7 @@ class VirtualDisplayDevice(BaseDevice):
             try:
                 self.launch(initial_app)
             except DeviceError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return self.display_id
 
     def stop(self) -> None:
@@ -160,7 +160,7 @@ class VirtualDisplayDevice(BaseDevice):
         try:
             app = self.current_app()
             if app not in ("", "unknown", "com.orbit.assistant"):
-                self._shell(f"am force-stop {app}")
+                self._shell(f"am force-stop {shlex.quote(app)}")
         except Exception:
             logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
         try:
@@ -268,11 +268,11 @@ class VirtualDisplayDevice(BaseDevice):
             # somewhere another app could read it. Lock it down, then remove it.
             path = "/data/local/tmp/pa-hands-off.png"
             target = shlex.quote(path)
-            self._shell(f"umask 077; screencap -p {target}")
+            self._shell(f"umask 077; screencap -p {shlex.quote(target)}")
             try:
                 data = self.transport.read_file(path)
             finally:
-                self._shell(f"rm -f {target}")
+                self._shell(f"rm -f {shlex.quote(target)}")
             if output_path:
                 with open(output_path, "wb") as fh:
                     fh.write(data)
@@ -290,7 +290,7 @@ class VirtualDisplayDevice(BaseDevice):
             data = b""
             for attempt in range(2):
                 try:
-                    self._send(f"frame {target}")
+                    self._send(f"frame {shlex.quote(target)}")
                     reply = self._read_line(timeout=15)
                     if not reply.startswith("FRAME"):
                         raise DeviceError(f"helper did not produce a frame: {reply!r}")
@@ -298,11 +298,11 @@ class VirtualDisplayDevice(BaseDevice):
                     # directory); this is a picture of the user's screen, so it
                     # is owner-only and gone again before anything else can
                     # look at it.
-                    self._shell(f"chmod 600 {target}")
+                    self._shell(f"chmod 600 {shlex.quote(target)}")
                     try:
                         data = self.transport.read_file(target)
                     finally:
-                        self._shell(f"rm -f {target}")
+                        self._shell(f"rm -f {shlex.quote(target)}")
                     if data[:8] == b"\x89PNG\r\n\x1a\n":
                         break
                     last = DeviceError(f"frame is not a PNG ({data[:4]!r})")
@@ -607,8 +607,8 @@ class VirtualDisplayDevice(BaseDevice):
                 # own component here would stop the process that is running the
                 # crawl, which is exactly how a hands-off crawl died one second
                 # after its first tap.
-                raise LaunchRefused(package, f"resolved to the agent itself: {activity}")
-            self._shell(f"am start -S -n {activity}")
+                raise LaunchRefused(package, f"resolved to the agent itself: {shlex.quote(activity)}")
+            self._shell(f"am start -S -n {shlex.quote(activity)}")
             # A cold start of a large app (NoteApp) takes longer than six seconds
             # on this phone, and the launch was being reported as refused while
             # the app was still drawing.
@@ -640,12 +640,12 @@ class VirtualDisplayDevice(BaseDevice):
         activity = activity or self._resolve_activity(package)
         if activity.startswith("com.orbit.assistant"):
             raise DeviceError(
-                f"{package} resolved to the agent's own component ({activity}); "
+                f"{shlex.quote(package)} resolved to the agent's own component ({shlex.quote(activity)}); "
                 "`am start -S` would stop this process")
-        print(f"[launch] {package} -> {activity or '(unresolved)'} on display {self.display_id}")
+        print(f"[launch] {shlex.quote(package)} -> {activity or '(unresolved)'} on display {self.display_id}")
         if not activity:
-            self._shell(f"am force-stop {package}")
-            self._shell(f"monkey -p {package} -c android.intent.category.LAUNCHER 1")
+            self._shell(f"am force-stop {shlex.quote(package)}")
+            self._shell(f"monkey -p {shlex.quote(package)} -c android.intent.category.LAUNCHER 1")
             time.sleep(1.0)
             if self.current_app() == package:
                 return True
@@ -653,7 +653,7 @@ class VirtualDisplayDevice(BaseDevice):
 
         for attempt in (1, 2):
             where = "" if self._is_hands_off() else f"--display {self.display_id} "
-            out = self._shell(f"am start -S {where}-n {activity}")
+            out = self._shell(f"am start -S {where}-n {shlex.quote(activity)}")
             if "Error" in out or "does not exist" in out:
                 print(f"[launch]   am start said: {out.strip()[:160]}")
             for _ in range(max(1, min(4, int(wait)))):
@@ -667,11 +667,11 @@ class VirtualDisplayDevice(BaseDevice):
                     # A prompt is in front. Dismiss it and look again: accepting
                     # it as "launched" hid the calendar case, where a leftover
                     # task made the prompt look like the app's own.
-                    print(f"[launch]   {package} is behind {front}; dismissing once")
+                    print(f"[launch]   {shlex.quote(package)} is behind {front}; dismissing once")
                     try:
                         self.press_back()
                     except DeviceError:
-                        pass
+                        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                     time.sleep(1.0)
                     if self.current_app() == package:
                         return True
@@ -691,17 +691,17 @@ class VirtualDisplayDevice(BaseDevice):
                     try:
                         self.press_back()
                     except DeviceError:
-                        pass
+                        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                     time.sleep(0.8)
                     try:
                         if self.current_app() == package:
                             return True
                     except DeviceError:
-                        pass
+                        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 # a task of this app living on another display wins the launch;
                 # remove it and try once more before giving up
-                print(f"[launch]   {package} did not come up here; hard stop and retry")
-                self._shell(f"am force-stop {package}")
+                print(f"[launch]   {shlex.quote(package)} did not come up here; hard stop and retry")
+                self._shell(f"am force-stop {shlex.quote(package)}")
                 time.sleep(1.0)
                 # Two different ways a page can hold the launch:
                 #
@@ -733,8 +733,8 @@ class VirtualDisplayDevice(BaseDevice):
                 except DeviceError:
                     blocker = ""
                 if blocker and blocker != package and "." in blocker:
-                    print(f"[launch]   clearing {blocker}, which is holding the screen")
-                    self._shell(f"am force-stop {blocker}")
+                    print(f"[launch]   clearing {shlex.quote(blocker)}, which is holding the screen")
+                    self._shell(f"am force-stop {shlex.quote(blocker)}")
                     time.sleep(0.8)
         # Before calling it unlaunchable: did it open on the user's screen?
         # That is a different outcome -- the step can be handed over.
@@ -752,7 +752,7 @@ class VirtualDisplayDevice(BaseDevice):
         if package == "com.orbit.assistant":
             print("[device] refused to force-stop the agent's own package")
             return False
-        self._shell(f"am force-stop {package}")
+        self._shell(f"am force-stop {shlex.quote(package)}")
         return True
 
     def settle(self, timeout: float = 2.5, interval: float = 0.2, stable_reads: int = 1) -> str:
@@ -813,8 +813,8 @@ class VirtualDisplayDevice(BaseDevice):
         activity = self._resolve_activity(package)
         if not activity:
             return False
-        print(f"[handover] {package} -> display 0 for the user")
-        self._shell(f"am start -S --display 0 -n {activity}")
+        print(f"[handover] {shlex.quote(package)} -> display 0 for the user")
+        self._shell(f"am start -S --display 0 -n {shlex.quote(activity)}")
         return True
 
     def _roots_by_display(self) -> dict:
@@ -1008,7 +1008,7 @@ class VirtualDisplayDevice(BaseDevice):
 
     def _resolve_activity(self, package: str) -> str:
         try:
-            out = self._shell(f"cmd package resolve-activity --brief {package}")
+            out = self._shell(f"cmd package resolve-activity --brief {shlex.quote(package)}")
         except DeviceError:
             return ""
         for line in reversed(out.splitlines()):

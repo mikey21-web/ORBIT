@@ -71,3 +71,16 @@ The script defaults to macOS SDK and JDK paths. On Linux or Windows set
 `android-app/build.sh` builds a dependency-free APK with `aapt2`, `javac`, `d8` and
 `apksigner`. It predates the current Kotlin/Chaquopy sources and is not the release
 path.
+
+## Deployment constraints
+
+The app targets Android 14 or newer and arm64 devices only. The virtual-display
+helper and the bundled Python runtime are built for that combination.
+
+Wireless-debugging pairing and broad app visibility are required for the agent to
+operate other apps. Those capabilities are not compatible with Google Play
+distribution, so ORBIT is installed from an APK.
+
+Device-built maps under `orbit/maps/` stay local because they can contain device
+names and account text. The APK ships a sanitized settings map; other maps are
+built on the device when needed.

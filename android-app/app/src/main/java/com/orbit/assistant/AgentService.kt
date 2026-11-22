@@ -191,7 +191,7 @@ class AgentService : Service() {
                 // the chat UI talks to this over plain HTTP on loopback
                 val served = ondevice.callAttr(
                     "serve",
-                    SERVER_PORT,
+                    BuildConfig.AGENT_PORT,
                     config.apiKey,
                     config.apiBase,
                     config.model,
@@ -375,7 +375,6 @@ class AgentService : Service() {
         /** How long one acquisition lasts; a live task renews it. */
         private const val WATCH_LOCK_MS = 30 * 60 * 1000L
 
-        private const val SERVER_PORT = 8765
         @Volatile
         private var started = false
         @Volatile

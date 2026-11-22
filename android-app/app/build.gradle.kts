@@ -23,6 +23,8 @@ defaultConfig {
         targetSdk = 34
         versionCode = 8
         versionName = "0.4.4"
+        buildConfigField("int", "AGENT_PORT", System.getenv("ORBIT_PORT") ?: "8765")
+        buildConfigField("String", "BROWSER_TOKEN", "\"${java.util.UUID.randomUUID()}\"")
 
         ndk {
             abiFilters += listOf("arm64-v8a")

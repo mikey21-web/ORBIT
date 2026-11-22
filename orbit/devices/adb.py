@@ -19,6 +19,10 @@ inside the APK, driving a virtual display instead of the physical screen.
 
 from __future__ import annotations
 
+import logging
+
+import shlex
+
 import os
 import re
 import shutil
@@ -278,27 +282,27 @@ class AdbDevice(BaseDevice):
             try:
                 self.shell(start)
             except DeviceError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return self._wait_foreground(package, deadline)
 
         try:
-            self.shell(f"monkey -p {package} -c android.intent.category.LAUNCHER 1")
+            self.shell(f"monkey -p {shlex.quote(package)} -c android.intent.category.LAUNCHER 1")
         except DeviceError:
-            pass
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         if self._wait_foreground(package, min(deadline, time.time() + 2.0)):
             return True
 
         activity = self._resolve_activity(package)
         if activity:
             try:
-                self.shell(f"am start -n {activity}")
+                self.shell(f"am start -n {shlex.quote(activity)}")
             except DeviceError:
                 return False
             if self._wait_foreground(package, deadline):
                 return True
 
         try:
-            self.shell(f"monkey -p {package} -c android.intent.category.LAUNCHER 1")
+            self.shell(f"monkey -p {shlex.quote(package)} -c android.intent.category.LAUNCHER 1")
         except DeviceError:
             return False
         return self._wait_foreground(package, deadline)
@@ -313,7 +317,7 @@ class AdbDevice(BaseDevice):
 
     def _resolve_activity(self, package: str) -> str:
         try:
-            out = self.shell(f"cmd package resolve-activity --brief {package}")
+            out = self.shell(f"cmd package resolve-activity --brief {shlex.quote(package)}")
         except DeviceError:
             return ""
         for line in reversed(out.splitlines()):
@@ -323,7 +327,7 @@ class AdbDevice(BaseDevice):
         return ""
 
     def force_stop(self, package: str) -> bool:
-        self.shell(f"am force-stop {package}")
+        self.shell(f"am force-stop {shlex.quote(package)}")
         return True
 
     def current_app(self) -> str:

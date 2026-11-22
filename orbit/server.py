@@ -811,7 +811,7 @@ def _write_bench_header(map_path: str, summary: dict) -> None:
             _yaml.safe_dump(data, fh, allow_unicode=True, sort_keys=False)
         os.replace(tmp, map_path)
     except OSError:
-        pass
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
 
 
 def _bench_run(bench_id: str, map_path: str, limit: int, device, result: dict) -> None:
@@ -1622,7 +1622,7 @@ def make_llm(
 def main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--serial", default=None)
-    parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--port", type=int, default=int(os.environ.get("ORBIT_PORT", "8765")))
     parser.add_argument("--api-key", default=os.environ.get("OPENROUTER_API_KEY", ""))
     parser.add_argument("--api-base", default="https://openrouter.ai/api/v1")
     parser.add_argument("--model", default=DEFAULT_MODEL)
@@ -1650,7 +1650,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         while True:
             time.sleep(3600)
     except KeyboardInterrupt:
-        pass
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
     finally:
         server.shutdown()
     return 0

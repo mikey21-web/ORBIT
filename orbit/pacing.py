@@ -11,6 +11,8 @@ caller, and a lost record costs nothing but an early crawl.
 
 from __future__ import annotations
 
+import logging
+
 import json
 import os
 import time
@@ -97,4 +99,4 @@ def _owner_only(path: str) -> None:
     try:
         os.chmod(path, 0o600)
     except OSError:
-        pass
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)

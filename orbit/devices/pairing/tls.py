@@ -10,6 +10,8 @@ Python's ``ssl`` needs the identity as files, hence the temp-file dance.
 
 from __future__ import annotations
 
+import logging
+
 import datetime
 import os
 import ssl
@@ -85,7 +87,7 @@ def context(
             try:
                 os.unlink(path)
             except OSError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
 
 
 def wrap(sock, cert_pem: bytes, key_pem: bytes, server_side: bool = False):

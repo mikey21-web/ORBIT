@@ -810,7 +810,7 @@ def llm_plan(task, app_maps, memory_hints, api_key, api_base, model):
             try:
                 plan = json.loads(rsp[start:end])
             except (json.JSONDecodeError, ValueError):
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
 
     if not isinstance(plan, list) or len(plan) == 0:
         _output(_ok(plan=[], steps=0, result="parse_failed",

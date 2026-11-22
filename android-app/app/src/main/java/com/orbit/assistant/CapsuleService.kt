@@ -289,7 +289,7 @@ class CapsuleService : Service() {
     /** /frame serves PNG bytes; base64 is only used inside the task JSON. */
     private fun getBytes(path: String): ByteArray? {
         return try {
-            val conn = URL("http://127.0.0.1:8765$path").openConnection() as HttpURLConnection
+            val conn = URL("http://127.0.0.1:${BuildConfig.AGENT_PORT}$path").openConnection() as HttpURLConnection
             conn.connectTimeout = 2000
             conn.readTimeout = 4000
             if (conn.responseCode != 200) {
@@ -302,7 +302,7 @@ class CapsuleService : Service() {
     }
 
     private fun get(path: String): String {
-        val conn = URL("http://127.0.0.1:8765$path").openConnection() as HttpURLConnection
+        val conn = URL("http://127.0.0.1:${BuildConfig.AGENT_PORT}$path").openConnection() as HttpURLConnection
         conn.connectTimeout = 2000
         conn.readTimeout = 4000
         if (path == "/frame") {
@@ -331,7 +331,7 @@ class CapsuleService : Service() {
             val tasks = JSONObject(get("/tasks")).optJSONObject("tasks") ?: return
             for (id in tasks.keys()) {
                 if (tasks.optJSONObject(id)?.optString("state") == "running") {
-                    val conn = URL("http://127.0.0.1:8765/task/$id/cancel")
+                    val conn = URL("http://127.0.0.1:${BuildConfig.AGENT_PORT}/task/$id/cancel")
                         .openConnection() as HttpURLConnection
                     conn.requestMethod = "POST"
                     conn.connectTimeout = 2000

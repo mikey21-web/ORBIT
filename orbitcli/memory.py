@@ -634,7 +634,7 @@ class UserMemory:
             items = json.loads(response[start:end])
             return [str(item).strip() for item in items if str(item).strip()]
         except (ValueError, json.JSONDecodeError):
-            pass
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
 
         lines = []
         for line in response.splitlines():

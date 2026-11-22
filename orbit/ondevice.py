@@ -411,7 +411,7 @@ def _start_heartbeat() -> None:
 
 
 def serve(
-    port: int = 8765,
+    port: int = int(os.environ.get("ORBIT_PORT", "8765")),
     api_key: str = "",
     api_base: str = "https://openrouter.ai/api/v1",
     model: str = DEFAULT_MODEL,

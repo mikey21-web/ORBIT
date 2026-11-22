@@ -26,6 +26,8 @@ Safety rails
 
 from __future__ import annotations
 
+import shlex
+
 import logging
 
 import argparse
@@ -1062,7 +1064,7 @@ def _crawl_verified(bm, controller, device, package, app_name, output_path,
             try:
                 device.force_stop(front)
             except DeviceError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             time.sleep(0.4)
         device.force_stop(package)
         time.sleep(0.3)
@@ -1082,14 +1084,14 @@ def _crawl_verified(bm, controller, device, package, app_name, output_path,
                 device.press_home()
                 print("[Verified]   sent the agent's own app to the background")
             except DeviceError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         elif front and front != package and front not in (
                 "com.android.systemui", "com.miui.home", "com.android.launcher3"):
             try:
                 device.force_stop(front)
                 print(f"[Verified]   cleared {front} from the display")
             except DeviceError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         # Honour the verdict: HyperOS answers android.settings.SETTINGS with
         # com.android.phone's mobile-network page, so an unchecked intent launch
         # starts every branch in the wrong app -- which is exactly how the
@@ -1100,7 +1102,7 @@ def _crawl_verified(bm, controller, device, package, app_name, output_path,
             landed = device.launch(package)
         if not landed:
             stats["foreign"] += 1
-            print(f"[Verified]   cannot bring {package} up; skipping this branch")
+            print(f"[Verified]   cannot bring {shlex.quote(package)} up; skipping this branch")
             continue
         # launch() already polled until the app was in front, so the old
         # three-second "give it time" was paying twice for the same wait.
@@ -1135,7 +1137,7 @@ def _crawl_verified(bm, controller, device, package, app_name, output_path,
             try:
                 xml = _guarded(step_timeout, device.dump_ui)
             except StepTimeout:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         point = (int(element["cx"]), int(element["cy"]))
         tapped = point
         device.tap(*point)
@@ -1148,7 +1150,7 @@ def _crawl_verified(bm, controller, device, package, app_name, output_path,
         try:
             after = _guarded(step_timeout, device.dump_ui)
         except StepTimeout:
-            pass
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         reached_field = bool(after) and any(
             node.editable or "EditText" in (node.klass or "")
             for node in parse_nodes(after)
@@ -1224,7 +1226,7 @@ def _crawl_verified(bm, controller, device, package, app_name, output_path,
                 and quick_xml_package not in FOREIGN_HOSTS.get(package, frozenset()) \
                 and quick_xml_package not in DIALOG_PACKAGES:
             stats["foreign"] += 1
-            print(f"[Verified]   the dump is {quick_xml_package}, not {package}; "
+            print(f"[Verified]   the dump is {quick_xml_package}, not {shlex.quote(package)}; "
                   "not recording this screen")
             continue
         if quick_elements:
@@ -1287,7 +1289,7 @@ def _crawl_verified(bm, controller, device, package, app_name, output_path,
                           "transient element(s)")
                 new_elements = stable
         except StepTimeout:
-            pass
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         # Checked again after the stability filter: a five-element page can lose
         # two transient ones and become a screen nothing can match (measured:
         # six such screens survived a crawl whose check ran only before it).
@@ -1459,7 +1461,7 @@ def _crawl_verified(bm, controller, device, package, app_name, output_path,
     target = output_path
     if cancelled:
         target = output_path + ".partial"
-        print(f"[Verified] cancelled: keeping the map in use, writing {target}")
+        print(f"[Verified] cancelled: keeping the map in use, writing {shlex.quote(target)}")
     with open(target, "w", encoding="utf-8") as fh:
         yaml.safe_dump(output, fh, allow_unicode=True, sort_keys=False)
 
@@ -1647,7 +1649,7 @@ def _ensure_home(device: PhoneDevice, package: str, launch_intent: str,
                 started = False
                 continue
         if dumped and dumped != package:
-            print(f"  start attempt {attempt}: the dump is {dumped}, not {package}")
+            print(f"  start attempt {attempt}: the dump is {dumped}, not {shlex.quote(package)}")
             # Something else is in front and pressing back did not move it.
             # Stop it -- but never the shell of the phone itself.
             if dumped not in ("android", "com.android.systemui", "com.miui.home"):
@@ -1655,7 +1657,7 @@ def _ensure_home(device: PhoneDevice, package: str, launch_intent: str,
                     device.force_stop(dumped)
                     time.sleep(1.0)
                 except DeviceError:
-                    pass
+                    logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             started = False
         elif expect:
             started = expect in xml
@@ -1674,7 +1676,7 @@ def _ensure_home(device: PhoneDevice, package: str, launch_intent: str,
         try:
             device.press_back()
         except DeviceError:
-            pass
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         time.sleep(1.0)
     return False
 
@@ -1704,7 +1706,7 @@ def _restore_awake(device: PhoneDevice, previous: Optional[str]) -> None:
         else:
             device.shell("svc power stayon false")
     except DeviceError:
-        pass
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
 
 
 # ---------------------------------------------------------------------------

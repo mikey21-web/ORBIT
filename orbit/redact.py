@@ -36,13 +36,17 @@ EMAIL_TOKEN = "<email>"
 PERSONAL_TOKEN = "<personal>"
 
 
-def auto_terms(device=None) -> list[str]:
-    """Device-derived strings that are almost always personal.
+BRAND_RE = re.compile(r"\b(REDMI|Xiaomi|iPhone|Galaxy|Pixel)\b", re.I)
 
-    ``settings get global device_name`` on HyperOS returns something like
-    "nameofDeviceModel"; the part before of is the account name, which
-    also shows up on its own as a settings row.
-    """
+
+def _owner_hint(value: str) -> str:
+    match = BRAND_RE.search(value)
+    if match and match.start() >= 2:
+        return value[:match.start()].strip(" \t-_:.,")
+    return ""
+
+
+def auto_terms(device=None) -> list[str]:
     terms: list[str] = []
     if device is None:
         return terms
@@ -50,10 +54,9 @@ def auto_terms(device=None) -> list[str]:
         name = device.shell("settings get global device_name").strip()
         if name and name != "null":
             terms.append(name)
-            if "of" in name:
-                prefix = name.split("of", 1)[0].strip()
-                if len(prefix) >= 3:
-                    terms.append(prefix)
+            hint = _owner_hint(name)
+            if len(hint) >= 3:
+                terms.append(hint)
     except Exception:
         logging.getLogger(__name__).debug('swallowed exception', exc_info=True)
     try:
@@ -66,17 +69,17 @@ def auto_terms(device=None) -> list[str]:
 
 
 def name_candidates(texts: Iterable[str], terms: Iterable[str]) -> list[str]:
-    """Extract "<name>of<device>" prefixes, which are usually account names."""
-    terms = [t for t in terms if t]
+    usable = [t for t in terms if t]
     found: list[str] = []
     for text in texts:
-        if "of" not in text:
-            continue
-        head, tail = text.split("of", 1)
-        head = head.strip()
-        if 2 <= len(head) <= 20 and any(term in tail for term in terms):
-            if head not in found:
-                found.append(head)
+        for term in usable:
+            index = text.find(term)
+            if index <= 0:
+                continue
+            prefix = text[:index].strip(" \t-_:.,")
+            for candidate in (prefix, _owner_hint(prefix)):
+                if 2 <= len(candidate) <= 20 and candidate not in found:
+                    found.append(candidate)
     return found
 
 

@@ -27,6 +27,8 @@ Frame layout (all little-endian), from ``adb/protocol.h``::
 
 from __future__ import annotations
 
+import logging
+
 import socket
 import ssl
 import threading
@@ -186,7 +188,7 @@ class ShellStream:
                 if not self._pump():
                     break
         except (socket.timeout, TimeoutError):
-            pass
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         finally:
             self._set_timeout(self._client._timeout)
         if b"\n" not in self._buf:
@@ -204,7 +206,7 @@ class ShellStream:
                 if not self._pump():
                     break
         except (socket.timeout, TimeoutError):
-            pass
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         finally:
             if timeout is not None:
                 self._set_timeout(self._client._timeout)
@@ -231,7 +233,7 @@ class ShellStream:
                 if not self._pump():
                     break
         except (socket.timeout, TimeoutError):
-            pass
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         finally:
             self._set_timeout(self._client._timeout if self._client._sock else None)
         if not self.remote_id:
@@ -248,7 +250,7 @@ class ShellStream:
         try:
             self._send(CLSE, self.local_id, self.remote_id)
         except OSError:
-            pass
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         self.eof = True
 
     def __enter__(self):
@@ -337,7 +339,7 @@ class AdbClient:
             try:
                 raw.close()
             except OSError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             raise
 
     def reconnect(self) -> str:

@@ -29,6 +29,10 @@ class BrowserActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (intent?.getStringExtra("browser_token") != BuildConfig.BROWSER_TOKEN) {
+            finish()
+            return
+        }
         val requested = intent?.getStringExtra("url") ?: "https://example.com"
         val parsed = Uri.parse(requested)
         val url = if (parsed.scheme == "http" || parsed.scheme == "https") requested else "https://example.com"

@@ -1,3 +1,4 @@
+import logging
 """App-specific profile builder for map crawling.
 
 Three-stage pipeline:
@@ -211,7 +212,7 @@ def generate_profile(
                 try:
                     data = json.loads(rsp[start:end])
                 except (json.JSONDecodeError, ValueError):
-                    pass
+                    logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
 
     # Fallback: minimal profile from heuristics
     if not isinstance(data, dict):

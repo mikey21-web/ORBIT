@@ -17,6 +17,8 @@ reality: the executor only ever calls protocol methods.
 
 from __future__ import annotations
 
+import logging
+
 import random
 import time
 from dataclasses import dataclass, field
@@ -332,7 +334,7 @@ class MacroExecutor:
                         if click(label):
                             return f"click_text {label!r} (accessibility)"
                     except DeviceError:
-                        pass
+                        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 node = self._lookup(label)
                 if node is not None:
                     cx, cy = node.center

@@ -12,6 +12,8 @@ file is written beside the target and not in /tmp.
 """
 from __future__ import annotations
 
+import logging
+
 import json
 import os
 
@@ -25,7 +27,7 @@ def write_text(path: str, text: str, mode: int = 0o600) -> None:
     try:
         os.chmod(tmp, mode)
     except OSError:
-        pass
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
     os.replace(tmp, path)
 
 

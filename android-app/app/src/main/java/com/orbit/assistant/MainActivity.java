@@ -57,7 +57,7 @@ import java.util.List;
  */
 public class MainActivity extends Activity {
 
-    private static final String BASE = "http://127.0.0.1:8765";
+    private static final String BASE = "http://127.0.0.1:" + BuildConfig.AGENT_PORT;
     //: Set from filesDir/agent-token in onCreate. The agent rejects requests
     //: without it: on Android any app can reach loopback, so an open port here
     //: would let anything on the phone drive the agent.

@@ -12,6 +12,8 @@ challenged once a month ago is not the same as one that challenged an hour ago.
 
 from __future__ import annotations
 
+import logging
+
 import json
 import os
 import time
@@ -117,4 +119,4 @@ def _owner_only(path: str) -> None:
     try:
         os.chmod(path, 0o600)
     except OSError:
-        pass
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)

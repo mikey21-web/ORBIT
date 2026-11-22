@@ -12,6 +12,7 @@ interpreter, and a page that never finishes loading would freeze the agent.
 from __future__ import annotations
 
 import json
+import shlex
 import time
 
 #: Longest page text handed to the model in one go.
@@ -90,6 +91,15 @@ def available() -> bool:
 BROWSER_COMPONENT = "com.orbit.assistant/.BrowserActivity"
 
 
+def _browser_token() -> str:
+    try:
+        from java import jclass
+
+        return str(jclass("com.orbit.assistant.BuildConfig").BROWSER_TOKEN)
+    except Exception:
+        return ""
+
+
 def ensure_open(device, url: str, display: int = -1) -> str:
     """Start the browser on the agent's display and load ``url``.
 
@@ -102,8 +112,10 @@ def ensure_open(device, url: str, display: int = -1) -> str:
     # ("?a=1&b=2") is otherwise split by the remote shell, which truncates the
     # URL and runs the rest as a command.
     quoted = "'" + str(url).replace("'", "'\\''") + "'"
+    token = _browser_token()
+    extra = f" --es browser_token {shlex.quote(token)}" if token else ""
     try:
-        device.shell(f"am start --display {display} -n {BROWSER_COMPONENT} --es url {quoted}")
+        device.shell(f"am start --display {display} -n {BROWSER_COMPONENT} --es url {quoted}{extra}")
     except Exception as exc:  # noqa: BLE001 - reported by the caller
         print(f"[web] could not start the browser: {exc}")
         return ""

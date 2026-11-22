@@ -23,6 +23,8 @@ Not ported yet (deliberately, tracked as S2.5):
 
 from __future__ import annotations
 
+import logging
+
 import hashlib
 import json
 import re
@@ -1113,7 +1115,7 @@ class OrbitAgent:
             return None
         if not any((m.package or "").strip() == package for m in self.maps):
             return None
-        self.log(f"[agent] the screen is {package}; the map may help again")
+        self.log(f"[agent] the screen is {shlex.quote(package)}; the map may help again")
         result = self._macro_round(task, only=package)
         if result is not None:
             return result
@@ -1181,7 +1183,7 @@ class OrbitAgent:
                         self._driving_package = package
                         self._drove_app = True
                     except Exception as exc:  # noqa: BLE001 - the subtask can still try
-                        self.history.append(f"could not open {app} for this step: {exc}")
+                        self.history.append(f"could not open {shlex.quote(app)} for this step: {exc}")
             # Each subtask gets a share of what is left, not the whole pot and
             # not a fresh one. Handing the same counter to every subtask let the
             # first one spend it all -- measured on a two-step cross-app task:
@@ -1769,11 +1771,11 @@ class OrbitAgent:
                     self.device.press_back()
                     time.sleep(0.6)
                 except DeviceError:
-                    pass
+                    logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 last_xml = self.device.dump_ui()
             labels = [text for text, _x, _y in self._ui_texts(last_xml)[:6]]
             app = self._app_label(self._driving_package) if self._driving_package else ""
-            where = f"nowstay on`{app}`" if app else "nowstay ontextpage"
+            where = f"nowstay on`{shlex.quote(app)}`" if app else "nowstay ontextpage"
             if labels:
                 answer += where + ",textonhave:" + ",".join(labels) + "."
             else:
@@ -1846,7 +1848,7 @@ class OrbitAgent:
         try:
             amount = self._amount_on_screen(self.device.dump_ui())
         except DeviceError:
-            pass
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         what = f"`{label}`" + (f",text {amount}" if amount else "")
         question = (
             f"thistextstepwilltext:{what}.continue??reply`continue`text,replytexthetextcontentallwillcancel."
@@ -2115,8 +2117,8 @@ class OrbitAgent:
         app = getattr(self, "_current_app_hint", "")
         if not app:
             return ""
-        return (f"This step is about `{app}`. Use what {app} already shows before "
-                f"opening anything else, and stay in {app} while it can answer.")
+        return (f"This step is about `{shlex.quote(app)}`. Use what {shlex.quote(app)} already shows before "
+                f"opening anything else, and stay in {shlex.quote(app)} while it can answer.")
 
     def _ledger_block(self, round_no: int) -> str:
         """The "what I know so far" section, with the remaining budget."""
@@ -2334,7 +2336,7 @@ class OrbitAgent:
                         f"screen that is showing -- to enter a query use type(), "
                         f"to move around use tap_index or scroll."
                     )
-                    self.log(f"[agent] launch {package} skipped (opened {launches[package]}x)")
+                    self.log(f"[agent] launch {shlex.quote(package)} skipped (opened {launches[package]}x)")
                     return False
                 # Some apps only work where their own activities land: XHS's
                 # search page opens on the default display even when the app
@@ -2365,11 +2367,11 @@ class OrbitAgent:
                 # first for exactly this reason.
                 if self._only_on_other_display(device, package):
                     try:
-                        device.shell(f"am force-stop {package}")
+                        device.shell(f"am force-stop {shlex.quote(package)}")
                         time.sleep(0.8)
-                        self.log(f"[agent] {package} force-stopped: its task was only on another display")
+                        self.log(f"[agent] {shlex.quote(package)} force-stopped: its task was only on another display")
                     except DeviceError:
-                        pass
+                        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 try:
                     started = bool(device.launch(package))
                     if started:
@@ -2644,7 +2646,7 @@ class OrbitAgent:
         self.steps.append(Step(0, "handover", package, f"{reply or 'no reply'}"))
         if not reply or any(word in reply for word in ("cancel", "forget it", "give up", "cancel", "no")):
             self.history.append(f"hand_over: cancelled by the user ({reply!r})")
-            raise _Stranded(f"youcancel`{package}`thistextstep,textstay onthistext.")
+            raise _Stranded(f"youcancel`{shlex.quote(package)}`thistextstep,textstay onthistext.")
         try:
             self.device.launch(package)
             return True
@@ -2939,7 +2941,7 @@ class OrbitAgent:
                 moved = False
         question = (
             f"needyoutext:{reason or 'thistextsteponlyhaveyoutextdo'}.\n"
-            + (f"`{package}`alreadytexttoyouoftexton." if moved else "")
+            + (f"`{shlex.quote(package)}`alreadytexttoyouoftexton." if moved else "")
             + "reply when done`done`,I will continue;reply`cancel`then give upthistextstep."
         )
         reply = self.ask(question)
@@ -2948,7 +2950,7 @@ class OrbitAgent:
             try:
                 self.device.launch(package)
             except DeviceError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         self._settle()
         if reply is None:
             self.history.append("hand_over: no reply")
@@ -3029,7 +3031,7 @@ class OrbitAgent:
                     )
                     return True
                 self._record_spill(package, False)
-                self.log(f"[agent] {package}: pull did not take "
+                self.log(f"[agent] {shlex.quote(package)}: pull did not take "
                          f"({self._pull_attempts[package]} tries)")
 
         # Following: the app cannot be kept off the phone's screen, so drive it
@@ -3052,7 +3054,7 @@ class OrbitAgent:
                     )
                     return True
             except DeviceError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         # No way to follow (a device without display control): pull instead.
         pull = getattr(self.device, "pull_back", None)
         own_display = getattr(self.device, "display_id", None)
@@ -3075,7 +3077,7 @@ class OrbitAgent:
                     )
                     return True
             except DeviceError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         if getattr(self, "_dragged_back", False):
             # It came back once and escaped again: this app puts itself on the
             # user's display no matter what. Rather than stop, follow it -- the
@@ -3116,7 +3118,7 @@ class OrbitAgent:
         self.steps.append(Step(round_no, "escaped", self._app_label(package),
                                "moved to the user's display"))
         self.history.append(
-            f"{package} opened on your own screen; bringing it back to the agent's display"
+            f"{shlex.quote(package)} opened on your own screen; bringing it back to the agent's display"
         )
         try:
             self.device.launch(package)
@@ -3200,7 +3202,7 @@ class OrbitAgent:
                 if click(label):
                     return True
             except DeviceError:
-                pass
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         try:
             xml = self.device.dump_ui()
         except DeviceError:

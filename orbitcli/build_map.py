@@ -514,7 +514,7 @@ def _extract_json(text: str) -> dict:
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        pass
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
     # Fallback: find first { } block with bracket counting
     try:
         start = text.index("{")
@@ -527,7 +527,7 @@ def _extract_json(text: str) -> dict:
                 if depth == 0:
                     return json.loads(text[start:i + 1])
     except (ValueError, json.JSONDecodeError):
-        pass
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
     return {}
 
 
