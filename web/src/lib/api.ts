@@ -3,11 +3,19 @@ import type { AppRow, Crawl, MapRow, OrbitTask, UsageData } from "./types";
 const KEY_BASE = "orbit.base";
 const KEY_TOKEN = "orbit.token";
 
+function embedded(): boolean {
+  const host = window as unknown as { __ORBIT_EMBEDDED__?: boolean };
+  return host.__ORBIT_EMBEDDED__ === true || window.location.protocol === "file:";
+}
+
 export function getBase(): string {
-  return localStorage.getItem(KEY_BASE) || "/api";
+  const host = window as unknown as { __ORBIT_BASE__?: string };
+  return localStorage.getItem(KEY_BASE) || host.__ORBIT_BASE__
+    || (embedded() ? "http://127.0.0.1:8765" : "/api");
 }
 export function getToken(): string {
-  return localStorage.getItem(KEY_TOKEN) || "";
+  const host = window as unknown as { __ORBIT_TOKEN__?: string };
+  return localStorage.getItem(KEY_TOKEN) || host.__ORBIT_TOKEN__ || "";
 }
 export function setConnection(base: string, token: string) {
   localStorage.setItem(KEY_BASE, base || "/api");

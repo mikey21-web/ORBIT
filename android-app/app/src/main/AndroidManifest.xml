@@ -53,6 +53,10 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".WebConsoleActivity"
+            android:exported="true"
+            android:configChanges="orientation|screenSize|keyboardHidden" />
         <!-- Must stay exported: the agent opens pages by starting this activity
              with the display flag, and a shell uid cannot start a non-exported
              activity. It shows a page and nothing else, so the exposure is a URL

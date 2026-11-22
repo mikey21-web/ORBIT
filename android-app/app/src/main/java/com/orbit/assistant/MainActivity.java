@@ -247,6 +247,8 @@ public class MainActivity extends Activity {
         // and can act on them, so the second door only caused choices.
         findViewById(R.id.maps).setOnClickListener(v -> showMapsLibrary());
         findViewById(R.id.usage).setOnClickListener(v -> showUsage());
+        findViewById(R.id.console).setOnClickListener(v ->
+                startActivity(new Intent(this, WebConsoleActivity.class)));
 
         // "CLI+GUI / GUI" was a developer's name for two behaviours, and it left
         // every other reader guessing. The chip now says what it does and opens a
