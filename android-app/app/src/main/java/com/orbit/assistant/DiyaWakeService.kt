@@ -111,7 +111,7 @@ class DiyaWakeService : Service() {
             modelConfig = model,
             keywordsFile = "kws/keywords.txt",
             keywordsScore = 1.0f,
-            keywordsThreshold = 0.25f,
+            keywordsThreshold = 0.1f,
         )
         return KeywordSpotter(assetManager = assets, config = config)
     }
@@ -152,6 +152,7 @@ class DiyaWakeService : Service() {
                     val keyword = kws.getResult(currentStream).keyword
                     if (keyword.isNotBlank()) {
                         kws.reset(currentStream)
+                        Log.i(tag, "wake detected: $keyword")
                         mainHandler.post { onWake() }
                     }
                 }
