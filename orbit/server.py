@@ -1638,7 +1638,7 @@ def make_llm(
         vision_model=vision_model or model,
         # GPT-OSS reasons before answering; the old 800 budget was spent on
         # thinking and left no tool call or final text behind.
-        max_tokens=4096 if "api.groq.com" in api_base else 800,
+        max_tokens=1024 if "api.groq.com" in api_base else 800,
         # The reasoning switch is OpenRouter's; the client only sends it there.
         disable_reasoning=True,
         usage_path=usage_path, usage_sink=usage_sink,

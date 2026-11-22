@@ -96,6 +96,15 @@ class OpenAICompatClient:
 
     # -- public ----------------------------------------------------------
 
+    @staticmethod
+    def _compact_text(text: str, limit: int = 12000) -> str:
+        """Keep a text-only prompt small enough for low TPM tiers."""
+        if len(text) <= limit:
+            return text
+        head = limit // 3
+        tail = limit - head - 40
+        return text[:head] + "\n...[truncated]...\n" + text[-tail:]
+
     # -- native tool calling ---------------------------------------------
 
     def choose(
@@ -115,7 +124,10 @@ class OpenAICompatClient:
         use_image = image_png is not None and self.vision_supported
         user_content: object = user
         if image_png is not None and not self.vision_supported:
-            user_content = user + "\n\n[Screenshot omitted: this model is text-only.]"
+            user_content = (
+                self._compact_text(user)
+                + "\n\n[Screenshot omitted: this model is text-only.]"
+            )
         elif use_image:
             user_content = [
                 {"type": "text", "text": user},
@@ -175,7 +187,9 @@ class OpenAICompatClient:
     ) -> str:
         if not self.vision_supported:
             return self.text(
-                system, user + "\n\n[Screenshot omitted: this model is text-only.]",
+                system,
+                self._compact_text(user)
+                + "\n\n[Screenshot omitted: this model is text-only.]",
                 temperature,
             )
         data_uri = "data:image/png;base64," + base64.b64encode(image_png).decode()
