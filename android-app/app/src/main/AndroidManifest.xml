@@ -33,6 +33,8 @@
     <!-- The floating capsule: a picture of the agent's screen over other apps.
          The user grants this in Settings, it cannot be requested at runtime. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
 
     <application
         android:icon="@mipmap/ic_launcher"
@@ -96,6 +98,10 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="runs an on-device automation agent on a secondary display" />
         </service>
+        <service
+            android:name=".DiyaWakeService"
+            android:exported="false"
+            android:foregroundServiceType="microphone" />
         <service
             android:name=".OrbitAccessibilityService"
             android:exported="true"

@@ -2,10 +2,10 @@
 
 ## Current state
 
-ORBIT accepts text and screenshots through the local agent server. There is no
-audio code yet: no microphone permission, no speech-to-text, and no wake word.
-`CapsuleService` is retired; the only working in-app overlay is the virtual
-screen mirror in `MainActivity`.
+ORBIT accepts text and screenshots through the local agent server. The first
+voice slice is implemented: `DiyaWakeService` runs local sherpa-onnx keyword
+spotting, shows a glow and floating mic on “Hey Diya”, and sends the spoken
+command to `POST /task`. `CapsuleService` is retired.
 
 ## Recommended stack
 
@@ -37,15 +37,15 @@ encrypted preferences, never in source or logs.
 3. On wake: show a subtle glow, then a small floating mic button using the
    existing `SYSTEM_ALERT_WINDOW` permission and the overlay pattern already
    in `CapsuleService`.
-4. Tap the button: stream microphone audio through sherpa-onnx ASR until VAD
-   detects the end of speech.
+4. Tap the button: Android speech recognition captures one utterance.
 5. Send the transcript to `POST /task` on `127.0.0.1:8765` with the existing
    `X-Agent-Token` header; the answer returns to the overlay/chat.
-6. Keep the wake switch opt-in and show a persistent notification while the
-   microphone service runs.
+6. A persistent notification runs while the microphone service is active, with
+   a Stop action.
 
 ## Explicitly out of scope for the first slice
 
-- Training a custom "Hey Diya" model (needs recorded samples and a KWS trainer).
+- Training a custom "Hey Diya" model is unnecessary; open-vocabulary KWS uses
+  generated phoneme tokens.
 - Full continuous conversation mode; the first slice is wake + one utterance.
 - Replacing the chat UI; the overlay only shows a mic button and the reply.

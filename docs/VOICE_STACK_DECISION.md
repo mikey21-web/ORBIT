@@ -16,9 +16,10 @@ Gradle dependency (JitPack):
 implementation("com.github.k2-fsa.sherpa-onnx:sherpa-onnx:v1.13.5")
 ```
 
-Model files are not bundled in the APK because they are tens of megabytes.
-They should be downloaded on first use into app-private storage, with a
-checksum verified before loading.
+The bilingual keyword spotting model is bundled under
+`android-app/app/src/main/assets/kws`. It is about 9 MB and works offline.
+The phone tokens in `keywords.txt` are the generated form of “Hey Diya” for
+the model's phoneme lexicon; no voice samples or training are required.
 
 Rejected alternatives:
 
@@ -26,9 +27,9 @@ Rejected alternatives:
 - faster-whisper — Python server only, not Android.
 - openWakeWord — usable wake word but its bundled models are non-commercial.
 
-Next implementation steps:
+Implemented:
 
-1. Add `DiyaWakeService` with `RECORD_AUDIO` and microphone foreground service.
-2. Add a `VoiceBridge` around sherpa-onnx KWS + streaming ASR.
-3. Feed the transcript into the existing `POST /task` endpoint.
-4. Add the “Hey Diya” glow and mic overlay.
+1. `DiyaWakeService` holds a microphone foreground service and runs the KWS model.
+2. Detection of “Hey Diya” shows the glow and floating mic overlay.
+3. Tapping the mic uses Android speech recognition and posts the transcript to `POST /task`.
+4. All wake processing is local; no audio leaves the device for wake detection.
