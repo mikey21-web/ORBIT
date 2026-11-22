@@ -1146,10 +1146,12 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):  # noqa: N802
         self._guarded(self._get)
 
-    def do_OPTIONS(self):  # noqa: N802
-        port = str(getattr(self.server, "server_port", 8765))
+    def _host_allowed(self) -> bool:
         host = self.headers.get("Host", "")
-        if host not in {f"127.0.0.1:{port}", f"localhost:{port}"}:
+        return host.rsplit(":", 1)[0] in {"127.0.0.1", "localhost"}
+
+    def do_OPTIONS(self):  # noqa: N802
+        if not self._host_allowed():
             return self._send(403, {"error": "forbidden host"})
         self.send_response(204)
         self._cors()
@@ -1166,9 +1168,7 @@ class Handler(BaseHTTPRequestHandler):
         server = getattr(self, "server", None)
         config = getattr(server, "config", None) if server is not None else None
         token = getattr(config, "token", "") if config is not None else ""
-        port = str(getattr(server, "server_port", 8765))
-        host = self.headers.get("Host", "")
-        if host not in {f"127.0.0.1:{port}", f"localhost:{port}"}:
+        if not self._host_allowed():
             return self._send(403, {"error": "forbidden host"})
         if not token or not self._authorized(token):
             return self._send(401, {"error": "unauthorized: missing or wrong token"})
