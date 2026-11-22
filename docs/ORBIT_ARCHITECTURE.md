@@ -73,9 +73,16 @@ local retrieval, scheduler, secrets, replanning, guardrails, benchmark harness, 
 adapter with egress control, scoped MCP bridge, privacy dashboard, and 19 capability
 domains with keyword routing.
 
-Not yet implemented: Android keystore/Binder IPC hardening, on-device voice and offline
-models, OCR/document pipelines, external service integrations (calendar/mail/maps/payments),
-smart glasses, and hardware-backed live-device verification. See the tracked todo list.
+Real local implementations (verified by tests): `vectors.py` uses fastembed embeddings with
+an in-memory Chroma index; `ocr.py` uses RapidOCR on real rendered images; `browser.py`
+includes a live Playwright/Chromium backend driven against a local HTML page. These replace
+the earlier TF-IDF, mock-browser and stubbed-perception scaffolds.
+
+Still Python-level rather than external systems: the policy engine (not Cedar/OPA), the
+durable store (SQLite, not DBOS/Temporal) and the event bus (SQLite events, not NATS
+JetStream). Not yet implemented: Android keystore/Binder IPC hardening, on-device voice,
+offline model runtime, document parsing pipelines, external service integrations
+(calendar/mail/maps/payments), smart glasses, and hardware-backed device verification.
 
 ## Hard limits
 

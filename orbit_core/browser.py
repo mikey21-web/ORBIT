@@ -40,6 +40,39 @@ class BrowserAdapter:
                 "requires_approval": risk in (RiskLevel.HIGH, RiskLevel.CRITICAL)}
 
 
+class PlaywrightBrowser:
+    def __init__(self, headless: bool = True) -> None:
+        from playwright.sync_api import sync_playwright
+        self._playwright = sync_playwright().start()
+        self._browser = self._playwright.chromium.launch(headless=headless)
+        self._page = self._browser.new_page()
+
+    def navigate(self, url: str) -> str:
+        self._page.goto(url, wait_until="domcontentloaded")
+        return self._page.url
+
+    def text(self) -> str:
+        return self._page.locator("body").inner_text()
+
+    def click(self, text: str) -> bool:
+        try:
+            self._page.get_by_text(text, exact=False).first.click(timeout=5000)
+            return True
+        except Exception:
+            return False
+
+    def fill(self, selector: str, value: str) -> bool:
+        try:
+            self._page.locator(selector).first.fill(value, timeout=5000)
+            return True
+        except Exception:
+            return False
+
+    def close(self) -> None:
+        self._browser.close()
+        self._playwright.stop()
+
+
 class MockBrowser:
     def __init__(self) -> None:
         self.url = ""

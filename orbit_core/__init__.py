@@ -1,6 +1,6 @@
 from .approval import ApprovalGateway
 from .events import EventBus
-from .browser import BrowserAdapter, BrowserBackend, MockBrowser
+from .browser import BrowserAdapter, BrowserBackend, MockBrowser, PlaywrightBrowser
 from .eval import Benchmark, Case, CaseResult
 from .gateway import ModelGateway
 from .guardrails import Guardrails
@@ -11,6 +11,7 @@ from .intent import IntentInterpreter
 from .memory import ContextResolver, MemoryStore
 from .notifications import NotificationClassifier, NotificationInsight
 from .mcp_bridge import CapabilityToken, MCPBridge
+from .ocr import OCRReader
 from .models import (
     Approval,
     AuditEvent,
@@ -43,6 +44,7 @@ from .state import InvalidTransition, transition
 from .store import Store
 from .tools import ToolRegistry
 from .verification import Verifier
+from .vectors import VectorIndex
 
 __all__ = [
     "Approval", "ApprovalGateway", "AuditEvent", "Decision", "DenyAllPolicy",
@@ -53,9 +55,9 @@ __all__ = [
     "IntentInterpreter", "KnowledgeGraph", "LocalRetriever", "Memory", "MemoryBackend",
     "MCPBridge", "MemoryProposal", "MemoryStore", "MockBrowser", "ModelGateway",
     "NotificationClassifier", "NotificationInsight",
-    "Observation", "Orchestrator", "PhoneExecutor", "Planner", "PrivacyDashboard",
-    "Replanner",
-    "Relation", "SecretStore",     "SkillManifest", "SkillRegistry", "Specialist", "SpecialistRegistry",
+    "OCRReader", "Observation", "Orchestrator", "PhoneExecutor", "Planner",
+    "PlaywrightBrowser", "PrivacyDashboard", "Replanner",
+    "Relation", "SecretStore", "VectorIndex",     "SkillManifest", "SkillRegistry", "Specialist", "SpecialistRegistry",
     "SpecialistResult", "TaskScheduler",
     "Uncertainty", "UncertaintyEvaluator", "tokens",
     "PolicyEngine", "Principal", "RiskLevel", "Skill", "Store", "Task",
