@@ -744,7 +744,7 @@ class OrbitAgent:
             if self.device.current_app() == AGENT_PACKAGE:
                 self.device.press_back()
                 self.sleep(0.3)
-            self.device.shell("am start -n com.orbit.assistant/.MainActivity")
+            self.device.shell("am start -n com.orbit.assistant/.WebConsoleActivity")
             self.sleep(0.6)
         except Exception:  # noqa: BLE001 - the answer is already recorded
             pass

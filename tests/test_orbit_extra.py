@@ -54,7 +54,7 @@ def test_confirmation_prompt_is_readable():
 
 
 def test_tracked_sources_have_no_cjk():
-    excluded = {".git", "build", ".gradle", "__pycache__", ".pytest_cache"}
+    excluded = {".git", "build", ".gradle", "__pycache__", ".pytest_cache", "node_modules", "dist"}
     for path in ROOT.rglob("*"):
         if not path.is_file() or any(part in excluded for part in path.parts):
             continue

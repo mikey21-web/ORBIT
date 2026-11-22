@@ -101,7 +101,7 @@ class CapsuleService : Service() {
      * nothing.
      */
     private fun buildNotification(text: String): android.app.Notification {
-        val open = Intent(this, MainActivity::class.java)
+        val open = Intent(this, WebConsoleActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val openPending = android.app.PendingIntent.getActivity(
             this, 0, open,
@@ -131,7 +131,7 @@ class CapsuleService : Service() {
     }
 
     private fun openApp() {
-        val open = Intent(this, MainActivity::class.java)
+        val open = Intent(this, WebConsoleActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         try {
             startActivity(open)
@@ -150,7 +150,7 @@ class CapsuleService : Service() {
                 )
             )
         }
-        val open = Intent(this, MainActivity::class.java)
+        val open = Intent(this, WebConsoleActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         val pending = android.app.PendingIntent.getActivity(
             this, 2, open,

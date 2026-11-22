@@ -649,7 +649,7 @@ def _hand_back_the_screen(device) -> None:
         # flag every finished task still opened a second copy of the chat
         # screen -- measured 15 live instances -- and the copy that came up
         # before the transcript was flushed rendered an empty conversation.
-        device.shell(f"am start --activity-single-top -n {AGENT_PACKAGE}/.MainActivity")
+        device.shell(f"am start -n {AGENT_PACKAGE}/.WebConsoleActivity")
     except Exception:  # noqa: BLE001
         pass
 

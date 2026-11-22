@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { RotateCcw, Settings2, Wifi, WifiOff } from "lucide-react";
+import { Monitor, Plus, Settings2, Wifi, WifiOff } from "lucide-react";
 import { api, ApiError } from "./lib/api";
 import { ChatMessageView, type ChatMessage } from "./components/ChatMessage";
 import { Composer } from "./components/Composer";
 import { SettingsModal } from "./components/SettingsModal";
+import { AgentScreen } from "./components/AgentScreen";
 
 const TERMINAL = ["done", "failed", "cancelled", "partial", "cancelling"];
 const STORE = "orbit.chat.v1";
@@ -27,6 +28,7 @@ export default function App() {
   const [messages, setMessages] = useState<ChatMessage[]>(loadMessages);
   const [connected, setConnected] = useState<boolean | null>(null);
   const [settings, setSettings] = useState(false);
+  const [screen, setScreen] = useState(false);
   const [error, setError] = useState("");
   const messagesRef = useRef(messages);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -73,6 +75,14 @@ export default function App() {
     return () => { window.clearInterval(conn); window.clearInterval(poll); };
   }, []);
 
+  const newChat = () => {
+    messagesRef.current
+      .filter((m) => m.role === "agent" && m.taskId && !TERMINAL.includes(m.state || ""))
+      .forEach((m) => void api.cancelTask(m.taskId!));
+    setMessages([]);
+    setError("");
+  };
+
   const waiting = messages.find((m) => m.role === "agent" && m.state === "waiting" && m.taskId);
   const working = messages.some((m) => m.role === "agent" && m.taskId && !TERMINAL.includes(m.state || ""));
 
@@ -116,7 +126,7 @@ export default function App() {
       <header className="border-b border-line bg-ink/70 px-4 py-3 backdrop-blur-xl sm:px-6">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/orbit-icon.png" alt="Orbit" className="h-8 w-8 rounded-lg" />
+            <img src="./orbit-icon.png" alt="Orbit" className="h-8 w-8 rounded-lg" />
             <div>
               <div className="font-display text-sm font-bold tracking-tight">Orbit</div>
               <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-faint">phone agent</div>
@@ -129,9 +139,10 @@ export default function App() {
               {connected === true ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
               {connected === false ? "offline" : connected ? "online" : "connecting"}
             </div>
-            {messages.length > 0 && (
-              <button title="Clear chat" onClick={() => setMessages([])} className="btn-ghost h-9 w-9 rounded-lg"><RotateCcw className="h-5 w-5" /></button>
-            )}
+            <button title="New chat" onClick={newChat} className="btn-ghost h-9 gap-1.5 rounded-lg px-2.5 text-xs">
+              <Plus className="h-4 w-4" /><span className="hidden sm:inline">New chat</span>
+            </button>
+            <button title="Agent screen" onClick={() => setScreen(true)} className="btn-ghost h-9 w-9 rounded-lg"><Monitor className="h-5 w-5" /></button>
             <button title="Settings" onClick={() => setSettings(true)} className="btn-ghost h-9 w-9 rounded-lg"><Settings2 className="h-5 w-5" /></button>
           </div>
         </div>
@@ -141,7 +152,7 @@ export default function App() {
         <div className="mx-auto min-h-full max-w-3xl px-4 py-8 sm:px-0 sm:py-12">
           {messages.length === 0 ? (
             <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-              <img src="/orbit-icon.png" alt="Orbit" className="mb-6 h-14 w-14 rounded-2xl shadow-sm shadow-black/10" />
+              <img src="./orbit-icon.png" alt="Orbit" className="mb-6 h-14 w-14 rounded-2xl shadow-sm shadow-black/10" />
               <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">What should I do on your phone?</h1>
               <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
                 Just type it. Orbit routes to a recorded macro first, then watches the screen when it needs to.
@@ -167,6 +178,7 @@ export default function App() {
 
       <Composer onSend={(text) => void send(text)} replying={waiting?.question} disabled={working && !waiting} />
       {settings && <SettingsModal onClose={() => setSettings(false)} />}
+      {screen && <AgentScreen onClose={() => setScreen(false)} />}
     </div>
   );
 }

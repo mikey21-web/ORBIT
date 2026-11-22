@@ -84,6 +84,15 @@ export const api = {
 
   usage: (days = 7) => request<UsageData>(`/usage?days=${days}`),
   frameUrl: () => `${getBase()}/frame${getToken() ? `?token=${encodeURIComponent(getToken())}` : ""}`,
+  frame: async (): Promise<string> => {
+    const token = getToken();
+    const res = await fetch(`${getBase()}/frame`, {
+      headers: token ? { "X-Agent-Token": token } : {},
+      cache: "no-store",
+    });
+    if (!res.ok) throw new ApiError(res.status, `frame ${res.status}`);
+    return URL.createObjectURL(await res.blob());
+  },
   testLlm: (body: { api_key: string; api_base?: string; model?: string; vision_model?: string }) =>
     post<{ ok: boolean; detail: string }>("/test-llm", body),
   markRisk: (packageName: string, note?: string) => post("/risk", { package: packageName, note }),

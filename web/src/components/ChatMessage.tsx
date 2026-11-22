@@ -43,7 +43,7 @@ export function ChatMessageView({ message, onCancel }: { message: ChatMessage; o
 
   return (
     <div className="fade-in flex justify-start gap-3 px-4 py-2 sm:px-0">
-      <img src="/orbit-icon.png" alt="Orbit" className="mt-1 h-7 w-7 shrink-0 rounded-lg" />
+      <img src="./orbit-icon.png" alt="Orbit" className="mt-1 h-7 w-7 shrink-0 rounded-lg" />
       <div className="max-w-[86%] sm:max-w-[76%]">
         <div className="rounded-2xl rounded-tl-md border border-line bg-surface px-4 py-3 text-[15px] leading-relaxed text-linen shadow-sm shadow-black/5">
           {message.frame && (
