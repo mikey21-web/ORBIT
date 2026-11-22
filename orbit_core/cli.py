@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 
-from .gateway import ModelGateway
 from .orchestrator import Orchestrator
 from .policy import PolicyEngine
 from .tools import ToolRegistry

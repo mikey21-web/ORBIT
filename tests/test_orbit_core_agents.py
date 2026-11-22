@@ -1,7 +1,7 @@
 import pytest
 
 from orbit_core import (
-    BrowserAdapter, CapabilityToken, MCPBridge, MockBrowser,
+    BrowserAdapter, MCPBridge, MockBrowser,
     MemoryProposal, MemoryStore, PrivacyDashboard, SpecialistRegistry,
 )
 

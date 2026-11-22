@@ -4,7 +4,6 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from .models import new_id
 
 
 @dataclass

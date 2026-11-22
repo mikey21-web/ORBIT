@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Protocol
 
-from .models import RiskLevel, new_id
+from .models import RiskLevel
 from .policy import classify_risk
 
 
