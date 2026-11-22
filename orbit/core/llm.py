@@ -20,7 +20,7 @@ from typing import Iterable, Optional, Protocol, runtime_checkable
 
 import requests
 
-DEFAULT_MODEL = "qwen/qwen3.8-flash"
+DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
 
 @dataclass

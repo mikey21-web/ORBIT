@@ -30,7 +30,7 @@ object AgentConfig {
     private const val SECRET_FILE = "agent.secret"
     private const val KEY_ALIAS = "orbit.api_key"
     private const val GCM_TAG_BITS = 128
-    const val DEFAULT_MODEL = "qwen/qwen3.8-flash"
+    const val DEFAULT_MODEL = "llama-3.3-70b-versatile"
 
     data class Config(
         val apiKey: String,
@@ -63,7 +63,7 @@ object AgentConfig {
         }
         return Config(
             apiKey = key,
-            apiBase = json.optString("api_base", "https://openrouter.ai/api/v1"),
+            apiBase = json.optString("api_base", "https://api.groq.com/openai/v1"),
             model = json.optString("model", DEFAULT_MODEL),
             // empty means "the same as the text model"
             visionModel = json.optString("vision_model", ""),
@@ -86,7 +86,7 @@ object AgentConfig {
             writeSecret(context, apiKey)
         }
         val json = JSONObject()
-            .put("api_base", apiBase.ifEmpty { "https://openrouter.ai/api/v1" })
+            .put("api_base", apiBase.ifEmpty { "https://api.groq.com/openai/v1" })
             .put("model", model.ifEmpty { DEFAULT_MODEL })
             .put("vision_model", visionModel)
             .put("max_rounds", maxRounds)

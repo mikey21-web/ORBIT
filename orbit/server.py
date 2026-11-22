@@ -134,7 +134,7 @@ class ServerConfig:
     #: same pipeline as the host, so without these it can only produce a bare
     #: map -- screens and elements, no descriptions and no aliases.
     llm_api_key: str = ""
-    llm_api_base: str = "https://openrouter.ai/api/v1"
+    llm_api_base: str = "https://api.groq.com/openai/v1"
     llm_model: str = DEFAULT_MODEL
     #: A task that produces no new step for this long is treated as stuck:
     #: its traceback is dumped and the task is failed instead of sitting in

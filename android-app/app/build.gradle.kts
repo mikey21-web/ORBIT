@@ -75,9 +75,11 @@ defaultConfig {
 
 chaquopy {
     defaultConfig {
+        version = "3.13"
         // Do not hardcode a path here: whoever clones the repo has their own
         // python. local.properties (not in git) can point at one, and the
-        // environment variable is the fallback.
+        // environment variable is the fallback. Chaquopy 17 requires the
+        // build Python to match the app's Python major/minor version.
         val localPython = rootProject.file("local.properties").let { props ->
             if (props.exists()) {
                 Properties().apply { props.inputStream().use { load(it) } }
@@ -86,7 +88,7 @@ chaquopy {
                 null
             }
         }
-        buildPython(localPython ?: System.getenv("BUILD_PYTHON") ?: "python3")
+        buildPython(localPython ?: System.getenv("BUILD_PYTHON") ?: "python3.13")
         pip {
             install("requests")
             install("PyYAML")

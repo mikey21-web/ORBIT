@@ -1698,18 +1698,11 @@ public class MainActivity extends Activity {
         // chip row this replaces only offered seven providers and still asked
         // the reader to understand what a base URL was.
         final String[][] PROVIDERS = {
-                {"DeepSeek (official)", "https://api.deepseek.com/anthropic", "deepseek-flash"},
                 {"DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"},
-                {"OpenRouter", "https://openrouter.ai/api/v1", AgentConfig.DEFAULT_MODEL},
-                {"Zhipu", "https://open.bigmodel.cn/api/paas/v4", "glm-4v-flash"},
-                {"Cloud Model", "https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-vl-plus"},
-                {"SiliconFlow", "https://api.siliconflow.cn/v1", "Qwen/Qwen2.5-VL-72B-Instruct"},
-                {"", "https://api.moonshot.cn/v1", "moonshot-v1-8k-vision-preview"},
+                {"Groq", "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"},
                 {"OpenAI", "https://api.openai.com/v1", "gpt-4o-mini"},
-                {"Gemini", "https://generativelanguage.googleapis.com/v1beta/openai/", "gemini-2.0-flash"},
                 {"Anthropic", "https://api.anthropic.com/v1", "claude-sonnet-4-5"},
-                {"Local", "http://localhost:8000/v1", "Qwen/Qwen2.5-VL-7B-Instruct"},
-                {"", "", ""},
+                {"Custom", "", ""},
         };
 
         TextView provider = new TextView(this);
@@ -1741,18 +1734,21 @@ public class MainActivity extends Activity {
                     .show();
         });
 
-        // A pasted key often names its provider already. Recognising the two
-        // prefixes we are sure about saves a trip to the provider list without
-        // guessing at the rest.
+        // A pasted key often names its provider already. Fill the endpoint and
+        // model as soon as the prefix is recognised; anything else stays Custom.
         key.addTextChangedListener(new android.text.TextWatcher() {
             @Override
             public void onTextChanged(CharSequence text, int start, int before, int count) {
                 String value = text.toString().trim();
                 String picked = "";
-                if (value.startsWith("sk-or-v1")) {
-                    picked = "OpenRouter";
+                if (value.startsWith("gsk_")) {
+                    picked = "Groq";
                 } else if (value.startsWith("sk-ant-")) {
                     picked = "Anthropic";
+                } else if (value.startsWith("sk-proj-")) {
+                    picked = "OpenAI";
+                } else if (value.startsWith("sk-")) {
+                    picked = "DeepSeek";
                 }
                 if (picked.isEmpty()) {
                     return;

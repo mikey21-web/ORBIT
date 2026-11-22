@@ -8,19 +8,21 @@ need your own signing key and have not been verified here.
 - JDK 17
 - Android SDK platform 34 and build tools
 - Gradle 8.9 via the checked-in wrapper (`android-app/gradlew`)
-- Python 3 for Chaquopy and host-side tooling
+- Python 3.13 for Chaquopy and host-side tooling (must match the app runtime)
 - `rsync` for the sync scripts
 - For release builds: your own keystore and `android-app/keystore.properties`
 
 Set `ANDROID_HOME` to your SDK path, or create a local `android-app/local.properties`
 with `sdk.dir=...`. Set `ORBIT_PORT` before a build to change the agent's loopback
-port; the default is 8765. Chaquopy needs a supported build Python; if the default
-`python3` is too new, point `BUILD_PYTHON` at a Python 3.8–3.11 interpreter.
+port; the default is 8765. Chaquopy 17 needs a build Python matching the app's
+Python 3.13 runtime; if the default `python3.13` cannot be found, set `BUILD_PYTHON`
+to a Python 3.13 executable.
 
 ## Project layout
 
 The Gradle project root is `android-app/`; the app module is `android-app/app/`.
-The build uses Android Gradle Plugin 8.7.3, Kotlin 1.9.24 and Chaquopy 16.0.0.
+The build uses Android Gradle Plugin 8.7.3, Kotlin 1.9.24 and Chaquopy 17.2.0
+with Python 3.13 for 16 KB page-size support.
 Only `arm64-v8a` is built, and `minSdk`/`targetSdk` are 34.
 
 ## Sync bundled sources and maps

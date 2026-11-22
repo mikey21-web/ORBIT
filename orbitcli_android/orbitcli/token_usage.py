@@ -18,9 +18,7 @@ Usage:
     token_usage.save_task_report(snap, path)  # save per-task to file
 """
 
-# The app runs this file on Python 3.8 (Chaquopy), where `list[str]` in an
-# annotation is evaluated at def time and fails; the future import makes
-# annotations strings on every version.
+# Keep annotations as strings across Python versions used by Chaquopy.
 from __future__ import annotations
 
 import json
