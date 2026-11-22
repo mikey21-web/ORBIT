@@ -211,7 +211,6 @@ object Pairing {
         storeDir: String? = null,
     ): Result {
         if (code.isBlank()) return Result(false, "pairing code is empty")
-        if (host != "127.0.0.1" && host != "localhost") return Result(false, "pairing is loopback only")
         return try {
             // Reuse the stored identity when there is one: every pairing must
             // present the same key, otherwise the device ends up holding a key

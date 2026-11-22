@@ -626,6 +626,7 @@ class OrbitAgent:
             result.answer = self._matches_task_language(task, result.answer)
             return result
         except _Stranded as exc:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return self._result(False, exc.answer, "handover", 0)
         except LaunchRefused as exc:
             # An app whose launcher activity is singleTask can never be brought
@@ -864,6 +865,7 @@ class OrbitAgent:
             try:
                 xml = self.device.dump_ui()
             except DeviceError as exc:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 return self._result(False, "", f"device error: {exc}", 0)
             if self._ui_texts(xml):
                 return None
@@ -1109,6 +1111,7 @@ class OrbitAgent:
         try:
             package = self.device.current_app()
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return None
         package = (package or "").strip()
         if not package or package in self._routed_packages:
@@ -1300,6 +1303,7 @@ class OrbitAgent:
             if not check(0, package):
                 return False
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
         try:
             moved = bool(pull(package))
@@ -1316,6 +1320,7 @@ class OrbitAgent:
         try:
             xml = self.device.dump_ui()
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return None
         try:
             foreground = self.device.current_app()
@@ -1489,6 +1494,7 @@ class OrbitAgent:
                 xml = self.device.dump_ui()
                 png = self.device.screenshot()
             except DeviceError as exc:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 return self._result(False, "", f"device error: {exc}", round_no)
 
             # (The escape is checked right after each action and again just
@@ -2302,6 +2308,7 @@ class OrbitAgent:
                         try:
                             return bool(device.launch(package))
                         except NeedsHandover as exc:
+                            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                             return self._hand_over_app(exc.package)
                     name_text = self._app_label(package)
                     raise _Stranded(
@@ -2378,6 +2385,7 @@ class OrbitAgent:
                         launches[package] = launches.get(package, 0) + 1
                     return started
                 except NeedsHandover as exc:
+                    logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                     return self._hand_over_app(exc.package)
 
             if name == "tap_text":
@@ -2443,6 +2451,7 @@ class OrbitAgent:
             # not a failed action to retry: the app cannot come up here at all
             raise
         except (DeviceError, ValueError, TypeError):
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
         return False
 
@@ -2656,6 +2665,7 @@ class OrbitAgent:
                 f"already opened it for you,textdownofsteptextselfdone."
             ) from None
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
 
     #: Commands that change the phone in ways a misheard instruction should not.
@@ -2687,6 +2697,7 @@ class OrbitAgent:
         try:
             parts = shlex.split(command)
         except ValueError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return "blocked"
         if not parts:
             return "blocked"
@@ -2735,6 +2746,7 @@ class OrbitAgent:
         try:
             return not bool(on_ours(package))
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
 
     def _already_in_front(self, device, package: str) -> bool:
@@ -2757,6 +2769,7 @@ class OrbitAgent:
         try:
             return bool(check(package))
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
 
     def _run_shell(self, command: str) -> bool:
@@ -2989,6 +3002,7 @@ class OrbitAgent:
         try:
             on_phone = bool(check(0, package))
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
         if not on_phone:
             self._dragged_back = False
@@ -3178,6 +3192,7 @@ class OrbitAgent:
         try:
             xml = self.device.dump_ui()
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return ""
         best, best_distance = "", radius
         for text, cx, cy in self._ui_texts(xml):
@@ -3206,6 +3221,7 @@ class OrbitAgent:
         try:
             xml = self.device.dump_ui()
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
         candidates = self._ui_texts(xml)
         exact = next((c for c in candidates if c[0] == label), None)
@@ -3226,6 +3242,7 @@ class OrbitAgent:
         try:
             return bool(scroll(direction))
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
 
     def _swipe(self, args: list) -> bool:
@@ -3376,6 +3393,7 @@ def _parse_plan(reply: str, limit: int = 4) -> list[dict]:
     try:
         data = json.loads(text[start:end + 1])
     except (ValueError, json.JSONDecodeError):
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return []
     if not isinstance(data, list):
         return []

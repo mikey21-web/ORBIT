@@ -10,6 +10,8 @@ Android, importing this module must not require the iOS dependencies.
 
 from __future__ import annotations
 
+import logging
+
 import os
 import tempfile
 from typing import Optional
@@ -84,6 +86,7 @@ class WdaDevice(BaseDevice):
         try:
             return bool(self._wda.is_wda_ready(self.wda_url))
         except Exception:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
 
     def screenshot(self, output_path: Optional[str] = None) -> bytes:

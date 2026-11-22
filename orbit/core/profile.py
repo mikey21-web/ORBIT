@@ -23,6 +23,8 @@ heuristics when no key is configured.
 
 from __future__ import annotations
 
+import logging
+
 from .llm import DEFAULT_MODEL
 
 import argparse
@@ -87,6 +89,7 @@ def load_profile(path: str) -> Optional[Profile]:
         with open(path, encoding="utf-8") as fh:
             data = yaml.safe_load(fh)
     except (OSError, yaml.YAMLError):
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return None
     if not isinstance(data, dict):
         return None
@@ -213,6 +216,7 @@ def _extract_json(text: str):
         try:
             return json.loads(candidate)
         except (ValueError, TypeError):
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             continue
     return None
 

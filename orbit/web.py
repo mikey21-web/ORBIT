@@ -11,6 +11,8 @@ interpreter, and a page that never finishes loading would freeze the agent.
 
 from __future__ import annotations
 
+import logging
+
 import json
 import shlex
 import time
@@ -97,6 +99,7 @@ def _browser_token() -> str:
 
         return str(jclass("com.orbit.assistant.BuildConfig").BROWSER_TOKEN)
     except Exception:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return ""
 
 
@@ -344,6 +347,7 @@ class WebPage:
         try:
             return int(value)
         except (TypeError, ValueError):
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return 0
 
     def title(self) -> str:
@@ -357,4 +361,5 @@ class WebPage:
         try:
             return json.loads(raw)
         except (ValueError, TypeError):
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return default

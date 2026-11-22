@@ -170,6 +170,7 @@ class ShellStream:
                 if self._buf:
                     break
         except (socket.timeout, TimeoutError):
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return b""
         finally:
             if timeout is not None:

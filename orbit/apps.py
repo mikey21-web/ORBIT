@@ -12,6 +12,8 @@ line in a list.
 
 from __future__ import annotations
 
+import logging
+
 import os
 
 #: ``android.content.pm.ActivityInfo`` launch modes.
@@ -115,6 +117,7 @@ def mapped_packages(map_dir) -> set:
                             packages.add(line.split(":", 1)[1].strip().strip("'\""))
                             break
             except OSError:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 continue
     return packages
 
@@ -169,6 +172,7 @@ def load_refusals(path: str) -> set:
         with open(path, encoding="utf-8") as handle:
             return {line.strip() for line in handle if line.strip()}
     except OSError:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return set()
 
 

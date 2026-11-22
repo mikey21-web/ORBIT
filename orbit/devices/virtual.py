@@ -436,6 +436,7 @@ class VirtualDisplayDevice(BaseDevice):
         try:
             root = ET.fromstring(tree)
         except ET.ParseError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return None
         parent = {child: node for node in root.iter("node") for child in node}
         fallback = None
@@ -559,6 +560,7 @@ class VirtualDisplayDevice(BaseDevice):
             self._shell("cmd statusbar collapse")
             return True
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
 
     def press_home(self) -> bool:
@@ -791,6 +793,7 @@ class VirtualDisplayDevice(BaseDevice):
                 "-a android.intent.action.MAIN -c android.intent.category.HOME"
             )
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return ""
         for line in reversed(out.splitlines()):
             line = line.strip()
@@ -857,6 +860,7 @@ class VirtualDisplayDevice(BaseDevice):
         try:
             out = self._shell("dumpsys activity activities")
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return {}
         roots: dict = {}
         display = None
@@ -919,6 +923,7 @@ class VirtualDisplayDevice(BaseDevice):
         try:
             self._shell(f"am display move-stack {task} {self.display_id}")
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
         time.sleep(1.2)
         return not self.has_task_on(0, package)
@@ -1010,6 +1015,7 @@ class VirtualDisplayDevice(BaseDevice):
         try:
             out = self._shell(f"cmd package resolve-activity --brief {shlex.quote(package)}")
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return ""
         for line in reversed(out.splitlines()):
             line = line.strip()

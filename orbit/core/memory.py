@@ -21,6 +21,8 @@ store is plain data so it can be tested and inspected.
 
 from __future__ import annotations
 
+import logging
+
 import hashlib
 import json
 import os
@@ -397,5 +399,6 @@ def _extract_json(text: str):
         try:
             return json.loads(candidate)
         except (ValueError, TypeError):
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             continue
     return None

@@ -13,6 +13,8 @@ is removed or the file goes away.
 
 from __future__ import annotations
 
+import logging
+
 import json
 import os
 
@@ -25,6 +27,7 @@ def load_pins(path: str) -> dict:
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
     except (OSError, ValueError):
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return {}
     if not isinstance(data, dict):
         return {}
@@ -59,6 +62,7 @@ def better(path: str, candidate, previous_path: str, previous,
     try:
         return os.path.getmtime(path) >= os.path.getmtime(previous_path)
     except OSError:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return False
 
 

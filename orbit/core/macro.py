@@ -206,6 +206,7 @@ class MacroExecutor:
         try:
             xml = self.device.dump_ui()
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return None
         return find_label(xml, str(label))
 

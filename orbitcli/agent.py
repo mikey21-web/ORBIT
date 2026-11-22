@@ -156,10 +156,13 @@ def _run_cli(*args, timeout: int = 60) -> dict:
             return {"status": "error", "message": f"CLI exited {r.returncode}: {r.stderr[:200]}"}
         return json.loads(r.stdout.strip())
     except subprocess.TimeoutExpired:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return {"status": "error", "message": "CLI timeout"}
     except json.JSONDecodeError as e:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return {"status": "error", "message": f"JSON parse error: {e}"}
     except Exception as e:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return {"status": "error", "message": str(e)}
 
 
@@ -1187,6 +1190,7 @@ class OrbitAgent:
                 diff = np.abs(arr_a - arr_b).mean() / 255.0
                 return float(diff)
         except Exception:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return 1.0  # assume changed on error
 
     def _to_point(self, rx, ry) -> tuple:

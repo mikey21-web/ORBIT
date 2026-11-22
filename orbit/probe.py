@@ -18,6 +18,8 @@ pasted into an issue or a paper appendix.
 
 from __future__ import annotations
 
+import logging
+
 import argparse
 import re
 import time
@@ -44,6 +46,7 @@ def _installed_packages(device: AdbDevice) -> set[str]:
     try:
         out = device.shell("pm list packages")
     except DeviceError:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return set()
     return {
         line.strip().removeprefix("package:")
@@ -61,6 +64,7 @@ def _candidate_maps(installed: set[str], platform: str) -> list[AppMap]:
             try:
                 app = AppMap(path)
             except Exception:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 continue
             # A package id can exist on both platforms (e.g. com.example.social);
             # only offer maps built for the platform we are talking to.

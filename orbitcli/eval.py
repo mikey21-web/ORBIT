@@ -1,3 +1,4 @@
+import logging
 #!/usr/bin/env python3
 """Task evaluation harness  -  runs tasks and judges completion via VLM.
 
@@ -117,6 +118,7 @@ def judge_task(
             max_tokens=256, temperature=0.0,
         )
     except Exception as e:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return {"verdict": "ERROR", "reason": f"Judge VLM error: {e}"}
 
     pass_match = re.search(r'PASS:\s*(.*)', rsp, re.IGNORECASE)

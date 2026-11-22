@@ -8,6 +8,8 @@ is in the loop.
 
 from __future__ import annotations
 
+import logging
+
 from .core.llm import DEFAULT_MODEL
 
 import glob
@@ -372,6 +374,7 @@ def _read_token_file(path: str) -> str:
         with open(path, encoding="utf-8") as fh:
             return fh.read().strip()
     except OSError:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return ""
 
 
@@ -666,6 +669,7 @@ def _server_listening() -> bool:
         with _socket.create_connection(("127.0.0.1", port), timeout=0.6):
             return True
     except OSError:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return False
 
 

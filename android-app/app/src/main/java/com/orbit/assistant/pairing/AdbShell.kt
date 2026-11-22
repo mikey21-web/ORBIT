@@ -13,6 +13,7 @@ import java.security.KeyFactory
 import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.Principal
+import java.security.cert.CertificateException
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.spec.PKCS8EncodedKeySpec
@@ -64,7 +65,7 @@ object AdbShell {
     }
 
     @SuppressLint("TrustAllX509TrustManager", "CustomX509TrustManager")
-    private fun context(cert: X509Certificate, key: PrivateKey): SSLContext {
+    private fun context(app: android.content.Context, cert: X509Certificate, key: PrivateKey): SSLContext {
         val km = object : X509ExtendedKeyManager() {
             override fun getCertificateChain(alias: String?): Array<X509Certificate> {
                 android.util.Log.i("Pairing", "adb keymanager: chain for $alias")
@@ -84,12 +85,26 @@ object AdbShell {
         // certificate is generated per pairing, so there is no CA to check it
         // against. What actually authenticates the exchange is SPAKE2 with the
         // six-digit code from Settings -- the TLS layer here only carries it.
-        val trustAll = arrayOf<TrustManager>(object : X509TrustManager {
+        val pinFile = java.io.File(app.filesDir, "adbd-cert.der")
+        val trusted = if (pinFile.exists()) pinFile.readBytes() else null
+        val pinned = arrayOf<TrustManager>(object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<X509Certificate>, authType: String) {}
-            override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {}
+            override fun checkServerTrusted(chain: Array<X509Certificate>, authType: String) {
+                val presented = chain.firstOrNull()?.encoded
+                    ?: throw CertificateException("adbd presented no certificate")
+                if (trusted == null) {
+                    pinFile.writeBytes(presented)
+                    pinFile.setReadable(false, false)
+                    pinFile.setReadable(true, true)
+                    pinFile.setWritable(false, false)
+                    pinFile.setWritable(true, true)
+                } else if (!presented.contentEquals(trusted)) {
+                    throw CertificateException("adbd certificate changed since first use")
+                }
+            }
             override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
         })
-        return SSLContext.getInstance("TLS").apply { init(arrayOf<KeyManager>(km), trustAll, null) }
+        return SSLContext.getInstance("TLS").apply { init(arrayOf<KeyManager>(km), pinned, null) }
     }
 
     private fun frame(command: Int, arg0: Int, arg1: Int, data: ByteArray = ByteArray(0)): ByteArray {
@@ -120,12 +135,11 @@ object AdbShell {
     }
 
     /** Runs one command and returns its output together with the device banner. */
-    fun shell(certPem: ByteArray, keyPem: ByteArray, host: String, port: Int, command: String, timeoutMs: Int = 15000    ): String {
-        require(host == "127.0.0.1" || host == "localhost") { "adb shell is loopback only" }
+    fun shell(app: android.content.Context, certPem: ByteArray, keyPem: ByteArray, host: String, port: Int, command: String, timeoutMs: Int = 15000): String {
         val (cert, key) = identity(certPem, keyPem)
         // build the context up front: adbd appears to time out quickly if the
         // ClientHello is late after STLS
-        val tlsContext = context(cert, key)
+        val tlsContext = context(app, cert, key)
         val raw = Socket()
         raw.tcpNoDelay = true
         raw.connect(InetSocketAddress(host, port), timeoutMs)

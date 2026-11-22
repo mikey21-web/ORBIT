@@ -44,6 +44,7 @@ def load_profile(profile_path: str) -> Optional[dict]:
         data.setdefault("preserve_navigation", [])
         return data
     except Exception:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return None
 
 

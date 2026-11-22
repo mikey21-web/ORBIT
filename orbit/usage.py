@@ -12,6 +12,8 @@ write so it cannot grow without bound.
 
 from __future__ import annotations
 
+import logging
+
 import json
 import os
 import threading
@@ -85,6 +87,7 @@ def load(path: str) -> list:
                 try:
                     entry = json.loads(line)
                 except ValueError:
+                    logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                     continue
                 if isinstance(entry, dict) and "t" in entry:
                     out.append(entry)

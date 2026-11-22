@@ -51,6 +51,7 @@ def load(path: str) -> dict:
         with open(path, encoding="utf-8") as handle:
             data = json.load(handle)
     except (OSError, ValueError):
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return {}
     return data if isinstance(data, dict) else {}
 

@@ -84,3 +84,14 @@ distribution, so ORBIT is installed from an APK.
 Device-built maps under `orbit/maps/` stay local because they can contain device
 names and account text. The APK ships a sanitized settings map; other maps are
 built on the device when needed.
+
+## Known limitations
+
+The pairing package contains its own RSA, Ed25519 and SPAKE2 implementations in
+addition to maintained libraries. It has not received an independent crypto review.
+
+Host helper trees under `agent/`, `page_executor/`, `templates/` and `utils_mobile/`
+are still referenced by development scripts, so they remain in the repository.
+
+Large source files such as `MainActivity.java` and `core/agent.py` have not been
+split into smaller modules. Refactoring them is a separate maintenance task.

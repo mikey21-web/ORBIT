@@ -798,6 +798,7 @@ def _write_bench_header(map_path: str, summary: dict) -> None:
         with open(map_path, encoding="utf-8") as fh:
             data = _yaml.safe_load(fh) or {}
     except OSError:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return
     data["bench"] = {
         "ops": summary.get("ops", 0),
@@ -874,6 +875,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return self._send(400, {"error": "bad json"})
         package = str(body.get("package", "")).strip()
         if not package:
@@ -948,6 +950,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return self._send(400, {"error": "bad json"})
         config = self.server.config  # type: ignore[attr-defined]
         api_key = str(body.get("api_key") or "") or getattr(config, "llm_api_key", "")
@@ -1054,6 +1057,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return self._send(400, {"error": "bad json"})
         text = str(body.get("text", ""))
         target = body.get("display", None)
@@ -1072,6 +1076,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return self._send(400, {"error": "bad json"})
         map_path = str(body.get("map", "")).strip()
         if not map_path or not os.path.exists(map_path):
@@ -1118,8 +1123,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             handler()
         except (BrokenPipeError, ConnectionResetError):
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return                       # the client went away; nothing to say
         except BodyTooLarge as exc:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return self._send(413, {"error": str(exc)})
         except Exception as exc:          # noqa: BLE001 - that is the point
             import traceback
@@ -1161,6 +1168,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 return self._send(400, {"error": "bad json"})
             package = str(body.get("package", "")).strip()
             if not package:
@@ -1200,6 +1208,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 return self._send(400, {"error": "bad json"})
             package = str(body.get("package", "")).strip()
             if not package:
@@ -1221,6 +1230,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 return self._send(400, {"error": "bad json"})
             package = str(body.get("package", "")).strip()
             if not package:
@@ -1239,6 +1249,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 return self._send(400, {"error": "bad json"})
             name = os.path.basename(str(body.get("file", "")).strip())
             crawl_dir = os.path.join(os.path.dirname(config.memory_path), "crawls") \
@@ -1249,6 +1260,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 os.remove(path)
             except OSError as exc:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 return self._send(500, {"error": str(exc)})
             # a pin pointing at a file that is gone would silently do nothing
             from .map_pins import load_pins, save_pins
@@ -1296,6 +1308,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 return self._send(400, {"error": "bad json"})
             slot["answer"] = str(body.get("text", "")).strip()
             slot["event"].set()
@@ -1306,6 +1319,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(self.rfile.read(length) or b"{}")
         except ValueError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return self._send(400, {"error": "bad json"})
         text = str(body.get("text", "")).strip()
         if not text:
@@ -1377,6 +1391,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 body = json.loads(self.rfile.read(length) or b"{}")
             except ValueError:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 return self._send(400, {"error": "bad json"})
             text = str(body.get("text", ""))
             target = body.get("display", None)

@@ -252,6 +252,7 @@ def _screen_moved(device, step_timeout: float, parent_sig: str, bm,
     try:
         now = _guarded(step_timeout, device.dump_ui)
     except StepTimeout:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return False
     sig = bm._build_signature(
         bm._parse_elements_android(now, width, height, None), None)
@@ -709,6 +710,7 @@ def _element_point(element: dict, width: int, height: int):
             return None
         return int(float(nx) * width), int(float(ny) * height)
     except (TypeError, ValueError):
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return None
 
 
@@ -1571,6 +1573,7 @@ def _dismiss_dialog(device: PhoneDevice, xml: str) -> bool:
         try:
             device.tap(*node.center)
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
         print(f"  start: dismissed a system dialog by tapping {label!r}")
         return True

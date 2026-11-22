@@ -1,3 +1,4 @@
+import logging
 import http.client
 
 import anthropic
@@ -52,6 +53,7 @@ class Claude_official(OpenAIAgent):
                     temperature=0.0
                 )
         except Exception as e:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False, str(e)
 
         return res.content[0].text

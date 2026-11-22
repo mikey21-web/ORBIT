@@ -146,6 +146,7 @@ class AdbDevice(BaseDevice):
             state = self._exec(["get-state"], timeout=5).decode().strip()
             return state == "device"
         except Exception:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
 
     def info(self) -> DeviceInfo:
@@ -167,6 +168,7 @@ class AdbDevice(BaseDevice):
         try:
             return self._exec(["shell", f"getprop {key}"]).decode("utf-8", "replace").strip()
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return ""
 
     def _screen_size(self) -> tuple[int, int]:
@@ -174,6 +176,7 @@ class AdbDevice(BaseDevice):
         try:
             out = self.shell("wm size")
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return 1080, 1920
         override = re.search(r"Override size:\s*(\d+)x(\d+)", out)
         if override:
@@ -297,6 +300,7 @@ class AdbDevice(BaseDevice):
             try:
                 self.shell(f"am start -n {shlex.quote(activity)}")
             except DeviceError:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 return False
             if self._wait_foreground(package, deadline):
                 return True
@@ -304,6 +308,7 @@ class AdbDevice(BaseDevice):
         try:
             self.shell(f"monkey -p {shlex.quote(package)} -c android.intent.category.LAUNCHER 1")
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return False
         return self._wait_foreground(package, deadline)
 
@@ -319,6 +324,7 @@ class AdbDevice(BaseDevice):
         try:
             out = self.shell(f"cmd package resolve-activity --brief {shlex.quote(package)}")
         except DeviceError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
             return ""
         for line in reversed(out.splitlines()):
             line = line.strip()
@@ -335,6 +341,7 @@ class AdbDevice(BaseDevice):
             try:
                 out = self.shell(command)
             except DeviceError:
+                logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                 continue
             for pattern in _FOCUS_PATTERNS:
                 match = pattern.search(out)

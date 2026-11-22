@@ -18,6 +18,8 @@ and wall-clock time per operation. This is the number that says whether
 
 from __future__ import annotations
 
+import logging
+
 import argparse
 import json
 import random
@@ -98,6 +100,7 @@ def run_one(
     try:
         xml = device.dump_ui()
     except DeviceError as exc:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return Row(app.app_name, op.id, op.target_screen, "", 0.0, True, time.time() - started, str(exc))
 
     if dump_dir is not None:
@@ -200,6 +203,7 @@ def _installed(device: AdbDevice) -> set[str]:
     try:
         out = device.shell("pm list packages")
     except DeviceError:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return set()
     return {
         line.strip().removeprefix("package:")

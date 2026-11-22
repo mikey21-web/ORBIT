@@ -39,6 +39,7 @@ def _dump_xml_str(wda_url: str, session_id: str) -> Optional[str]:
             return None
         return source.strip().replace("\\n", "\n").replace("\\t", "\t").replace('\\"', '"')
     except Exception:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return None
 
 
@@ -578,6 +579,7 @@ def _enrich_map(
                 try:
                     item = json.loads(line)
                 except json.JSONDecodeError:
+                    logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
                     continue
                 orig_text = item.get("text", "")
                 aliases = item.get("aliases", [])

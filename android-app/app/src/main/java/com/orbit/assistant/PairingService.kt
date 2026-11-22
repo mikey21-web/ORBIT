@@ -58,7 +58,7 @@ class PairingService : Service() {
                     for (host in listOf(wifiAddress(), "127.0.0.1")) {
                         if (host == null) continue
                         try {
-                            res = com.orbit.assistant.pairing.AdbShell.shell(cert, key, host, adbPort, "id")
+                            res = com.orbit.assistant.pairing.AdbShell.shell(this@PairingService, cert, key, host, adbPort, "id")
                             Log.i("Pairing", "connected via $host")
                             break
                         } catch (t: Throwable) {
@@ -173,6 +173,9 @@ class PairingService : Service() {
             host, port, code, null, "orbit", 20000,
             java.io.File(filesDir, "identity").absolutePath,
         )
+        if (r.ok) {
+            java.io.File(filesDir, "adbd-cert.der").delete()
+        }
         Log.i("Pairing", "service result ok=${r.ok} detail=${r.detail}")
         return r
     }

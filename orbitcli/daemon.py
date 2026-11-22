@@ -19,6 +19,8 @@ Commands:
 
 from __future__ import annotations
 
+import logging
+
 import os
 import sys
 import time
@@ -303,6 +305,7 @@ def _load_app_info(app_map_path: str) -> dict:
         with open(app_map_path, "r") as f:
             return yaml.safe_load(f) or {}
     except Exception:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return {}
 
 

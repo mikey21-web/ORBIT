@@ -11,6 +11,8 @@ found, or when ``--strict`` turns warnings into failures.
 
 from __future__ import annotations
 
+import logging
+
 import argparse
 import re
 import sys
@@ -49,6 +51,7 @@ def validate_map(path: str | Path, max_duplicate_jaccard: float = 0.9) -> tuple[
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError) as exc:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return [_issue("E_LOAD", "map cannot be parsed", str(exc))], []
 
     for key in REQUIRED_KEYS:

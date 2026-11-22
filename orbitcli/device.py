@@ -33,6 +33,7 @@ def is_wda_ready(wda_url: str = None) -> bool:
         r = requests.get(f"{_wda_url_base(wda_url)}/status", timeout=5)
         return r.status_code == 200
     except Exception:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return False
 
 
@@ -54,6 +55,7 @@ def create_session(wda_url: str = None) -> Tuple[bool, str]:
             return True, sid
         return False, f"HTTP {r.status_code}: {r.text[:200]}"
     except Exception as e:
+        logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
         return False, str(e)
 
 
