@@ -1,6 +1,10 @@
 from .approval import ApprovalGateway
 from .events import EventBus
+from .autonomy import AutonomyEngine, Goal, Suggestion
 from .browser import BrowserAdapter, BrowserBackend, MockBrowser, PlaywrightBrowser
+from .dashboard import Dashboard
+from .desktop import DesktopRuntime, browser_extension_manifest, write_extension
+from .documents import DocumentReader
 from .eval import Benchmark, Case, CaseResult
 from .gateway import ModelGateway
 from .guardrails import Guardrails
@@ -47,7 +51,8 @@ from .verification import Verifier
 from .vectors import VectorIndex
 
 __all__ = [
-    "Approval", "ApprovalGateway", "AuditEvent", "Decision", "DenyAllPolicy",
+    "Approval", "ApprovalGateway", "AuditEvent", "AutonomyEngine", "Dashboard",
+    "Decision", "DenyAllPolicy", "DesktopRuntime", "DocumentReader",
     "Benchmark", "BrowserAdapter", "BrowserBackend", "CapabilityToken", "Case",
     "CaseResult", "CaMeLParser", "ContextResolver", "DataDisclosure",
     "EncryptedFileBackend", "Entity", "EventBus", "Evidence", "Guardrails",
@@ -62,7 +67,8 @@ __all__ = [
     "Uncertainty", "UncertaintyEvaluator", "tokens",
     "PolicyEngine", "Principal", "RiskLevel", "Skill", "Store", "Task",
     "TaskKind", "Tool", "ToolRegistry", "VerificationMethod", "Verifier",
-    "Workflow", "as_callback", "classify_risk", "observations_from_ui",
+    "Goal", "Suggestion", "Workflow", "as_callback", "browser_extension_manifest",
+    "classify_risk", "observations_from_ui",
     "redact_screenshot", "register_phone_tools", "sanitize_ui_tree", "scan",
-    "SecretBackend", "transition", "unwrap", "wrap_untrusted",
+    "SecretBackend",     "transition", "unwrap", "wrap_untrusted", "write_extension",
 ]
