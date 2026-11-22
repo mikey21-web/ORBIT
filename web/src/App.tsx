@@ -126,24 +126,24 @@ export default function App() {
       <header className="border-b border-line bg-ink/70 px-4 py-3 backdrop-blur-xl sm:px-6">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="./orbit-icon.png" alt="Orbit" className="h-8 w-8 rounded-lg" />
+            <img src="./orbit-icon.png" alt="Orbit" className="h-10 w-10 rounded-xl" />
             <div>
-              <div className="font-display text-sm font-bold tracking-tight">Orbit</div>
-              <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-faint">phone agent</div>
+              <div className="font-display text-base font-bold tracking-tight">Orbit</div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-faint">phone agent</div>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <div className={`mr-1 flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider ${
+          <div className="flex items-center gap-1.5">
+            <div className={`mr-1 flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-mono text-[11px] uppercase tracking-wider ${
               connected === true ? "border-sage/30 text-sage" : connected === false ? "border-danger/30 text-danger" : "border-line text-faint"
             }`}>
-              {connected === true ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />}
+              {connected === true ? <Wifi className="h-5 w-5" /> : <WifiOff className="h-5 w-5" />}
               {connected === false ? "offline" : connected ? "online" : "connecting"}
             </div>
-            <button title="New chat" onClick={newChat} className="btn-ghost h-9 gap-1.5 rounded-lg px-2.5 text-xs">
-              <Plus className="h-4 w-4" /><span className="hidden sm:inline">New chat</span>
+            <button title="New chat" onClick={newChat} className="btn-ghost h-11 gap-2 rounded-xl px-3 text-sm">
+              <Plus className="h-5 w-5" /><span className="hidden sm:inline">New chat</span>
             </button>
-            <button title="Agent screen" onClick={() => setScreen(true)} className="btn-ghost h-9 w-9 rounded-lg"><Monitor className="h-5 w-5" /></button>
-            <button title="Settings" onClick={() => setSettings(true)} className="btn-ghost h-9 w-9 rounded-lg"><Settings2 className="h-5 w-5" /></button>
+            <button title="Agent screen" onClick={() => setScreen(true)} className="btn-ghost h-11 w-11 rounded-xl"><Monitor className="h-6 w-6" /></button>
+            <button title="Settings" onClick={() => setSettings(true)} className="btn-ghost h-11 w-11 rounded-xl"><Settings2 className="h-6 w-6" /></button>
           </div>
         </div>
       </header>

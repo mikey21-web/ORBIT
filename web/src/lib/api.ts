@@ -95,5 +95,7 @@ export const api = {
   },
   testLlm: (body: { api_key: string; api_base?: string; model?: string; vision_model?: string }) =>
     post<{ ok: boolean; detail: string }>("/test-llm", body),
+  saveConfig: (body: { api_key: string; api_base?: string; model?: string; vision_model?: string }) =>
+    post<{ ok: boolean; detail: string; restart_required?: boolean }>("/config", body),
   markRisk: (packageName: string, note?: string) => post("/risk", { package: packageName, note }),
 };

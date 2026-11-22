@@ -998,6 +998,60 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"ok": False, "detail": "Connection failed. Check the key, model and endpoint."})
         return self._send(200, {"ok": True, "detail": "Key works."})
 
+    def _save_config(self) -> None:
+        length = self._body_length()
+        try:
+            body = json.loads(self.rfile.read(length) or b"{}")
+        except ValueError:
+            logging.getLogger(__name__).debug("swallowed exception", exc_info=True)
+            return self._send(400, {"error": "bad json"})
+        api_key = str(body.get("api_key") or "").strip()
+        api_base = str(body.get("api_base") or "").strip()
+        model = str(body.get("model") or "").strip()
+        vision = str(body.get("vision_model") or "").strip() or model
+        if not api_key:
+            return self._send(200, {"ok": False, "detail": "Enter an API key."})
+        parsed = urlparse(api_base)
+        if parsed.scheme != "https" or parsed.hostname not in ALLOWED_LLM_HOSTS:
+            return self._send(200, {"ok": False, "detail": "Endpoint is not allowed."})
+        if not model:
+            return self._send(200, {"ok": False, "detail": "Enter a model."})
+        config = self.server.config  # type: ignore[attr-defined]
+        if not config.memory_path:
+            return self._send(400, {"error": "this server has no writable app config"})
+        path = os.path.join(os.path.dirname(config.memory_path), "agent.json")
+        try:
+            existing = json.loads(open(path, encoding="utf-8").read()) if os.path.exists(path) else {}
+        except Exception:
+            existing = {}
+        existing.update({
+            "api_key": api_key,
+            "api_base": api_base,
+            "model": model,
+            "vision_model": vision,
+        })
+        existing.pop("mock", None)
+        directory = os.path.dirname(path)
+        if directory:
+            os.makedirs(directory, exist_ok=True)
+        tmp = path + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as handle:
+            json.dump(existing, handle)
+        os.chmod(tmp, 0o600)
+        os.replace(tmp, path)
+        config.llm_api_key = api_key
+        config.llm_api_base = api_base
+        config.llm_model = model
+        config.llm_factory = lambda usage_sink=None: make_llm(
+            api_key, api_base, model, vision, "",
+            usage_path=config.usage_path, usage_sink=usage_sink,
+        )
+        return self._send(200, {
+            "ok": True,
+            "detail": "Saved. Restart ORBIT to move the key into secure storage.",
+            "restart_required": True,
+        })
+
     def _drain_body(self) -> None:
         """Read and discard a request body so the connection stays usable."""
         length = self._body_length()
@@ -1326,6 +1380,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._start_crawl()
         if parts == ["test-llm"]:
             return self._test_llm()
+        if parts == ["config"]:
+            return self._save_config()
         if parts == ["warmup"]:
             self._drain_body()
             return self._warmup()
