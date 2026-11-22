@@ -78,8 +78,8 @@ object ScreenMarks {
         }
 
         // Downscale before sending: a 1280x2772 PNG costs about 4.7k tokens
-        // (roughly 750 pixels per token, the same figure Mika uses), and the
-        // marks are already drawn, so nothing is lost below ~720 wide.
+        // (roughly 750 pixels per token), and the marks are already drawn, so
+        // nothing is lost below ~720 wide.
         val target = 720
         val sent = if (marked.width > target) {
             val height = (marked.height.toLong() * target / marked.width).toInt()

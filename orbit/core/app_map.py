@@ -422,7 +422,9 @@ class AppMap:
         visited_ops: set[str] = set()
 
         def _skip(text: str) -> bool:
-            lowered = text.lower()
+            # A crawled element can have an empty `text:` field, which YAML
+            # loads as None. Treat it as no label instead of crashing the map.
+            lowered = str(text or "").lower()
             skips = (
                 "profile picture",
                 "navigate up",
@@ -440,9 +442,9 @@ class AppMap:
             )
             stripped = text.strip()
             # A single character is noise in Latin script ("x", "-") but a whole
-            # word in Chinese: I, like, text are the profile tab and the two buttons
-            # a feed is full of. Dropping them left NoteApp's map with no I
-            # operation at all, so "lookIofpage" could never be routed.
+            # word in Chinese ("me", "like" and "share" are the profile tab and
+            # the two buttons a feed is full of). Dropping them left NoteApp's map
+            # with no "me" operation at all, so "view my page" could never be routed.
             if len(stripped) <= 1 and stripped.isascii():
                 return True
             return any(s in lowered for s in skips)
@@ -470,7 +472,7 @@ class AppMap:
 
             base_macro = self.get_macro(screen_id)
             for element in screen.elements:
-                if element.redacted or _skip(element.text) or not element.text:
+                if element.redacted or not element.text or _skip(element.text):
                     continue
 
                 x = round(element.center[0] * self.screen_w)

@@ -1699,7 +1699,7 @@ public class MainActivity extends Activity {
         // the reader to understand what a base URL was.
         final String[][] PROVIDERS = {
                 {"DeepSeek", "https://api.deepseek.com/v1", "deepseek-chat"},
-                {"Groq", "https://api.groq.com/openai/v1", "llama-3.3-70b-versatile"},
+                {"Groq", "https://api.groq.com/openai/v1", "openai/gpt-oss-120b"},
                 {"OpenAI", "https://api.openai.com/v1", "gpt-4o-mini"},
                 {"Anthropic", "https://api.anthropic.com/v1", "claude-sonnet-4-5"},
                 {"Custom", "", ""},

@@ -374,8 +374,8 @@ class OrbitAccessibilityService : AccessibilityService() {
          * Reads the wireless-debugging pairing dialog: ``code@host:port``.
          *
          * Recognises the text by its *shape*, not by its language or its view
-         * ids (the approach Mika's PairingScreen uses): the code is a whole
-         * text node that is exactly six digits, the address is an
+         * ids: the code is a whole text node that is exactly six digits,
+         * the address is an
          * ``IPv4:port``. A window showing two different codes, or two
          * different addresses, is treated as unread -- better to fall back than
          * to pair with the wrong digits.

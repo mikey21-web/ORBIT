@@ -1,7 +1,7 @@
 """What the agent remembers between runs.
 
 Deliberately small, but built on the four choices that make a memory store
-usable rather than decorative -- all four taken from Mika's design:
+usable rather than decorative -- four deliberate choices:
 
 1. **Fixed prefix over retrieval.** If everything fits in the budget it is all
    injected, in a stable order, so the prompt prefix stays identical between
@@ -63,7 +63,7 @@ _SECRET_WORDS = (
 _DIGIT_WORDS = ("pin", "otp")
 
 #: Explicitly allowed: these are facts a phone assistant needs, not credentials.
-_ALLOWED_FACTS = ("phone number", "text", "address", "birthday", "family", "title", "shipping")
+_ALLOWED_FACTS = ("mobile number", "phone", "address", "birthday", "family", "title", "shipping")
 
 
 def is_sensitive(text: str) -> bool:
@@ -76,7 +76,7 @@ def is_sensitive(text: str) -> bool:
             return True
     for word in _DIGIT_WORDS:
         if re.search(rf"(?<![a-z]){word}(?![a-z])", lowered) and re.search(
-            rf"(?<![a-z]){word}(?![a-z])\s*[::=istext]?\s*\d", lowered
+            rf"(?<![a-z]){word}(?![a-z])\s*[:=]?\s*(?:is|as)?\s*\d", lowered
         ):
             return True
     return False

@@ -896,7 +896,7 @@ MIN_SCREEN_ELEMENTS = 4
 CONSEQUENTIAL = re.compile(
     r"(create|create|add|delete|remove|clear|clear|reset|format|uninstall|factory reset"
     r"|install|update all|update now|upgrade"
-    r"|confirm|save|submit|send|dial|call|text|text|downtext|text"
+    r"|confirm|save|submit|send|dial|call|pay|buy|place order|recharge"
     r"|take photo|record video|record audio"
     r"|start|launch|power off|reboot|log out|log out|unbind|unpair"
     # Social actions. A crawl tapping these edits the user's own account:
@@ -1272,9 +1272,9 @@ def _crawl_verified(bm, controller, device, package, app_name, output_path,
             continue
 
         # A screen is recorded from one dump, and a dump catches whatever is
-        # passing through: a "textdone" toast, a spinner label. Those texts are
-        # gone a second later, so a map built from them can never match again
-        # (a file-manager map kept "textdone" and then identified nothing).
+        # passing through: a "Refresh complete" toast, a spinner label. Those texts
+        # are gone a second later, so a map built from them can never match again
+        # (a file-manager map kept "Refresh complete" and then identified nothing).
         # Take a second dump and keep only what is on both.
         selected_new: list = []
         try:

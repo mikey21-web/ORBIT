@@ -30,7 +30,8 @@ object AgentConfig {
     private const val SECRET_FILE = "agent.secret"
     private const val KEY_ALIAS = "orbit.api_key"
     private const val GCM_TAG_BITS = 128
-    const val DEFAULT_MODEL = "llama-3.3-70b-versatile"
+    private const val DEPRECATED_GROQ_MODEL = "llama-3.3-70b-versatile"
+    const val DEFAULT_MODEL = "openai/gpt-oss-120b"
 
     data class Config(
         val apiKey: String,
@@ -61,10 +62,17 @@ object AgentConfig {
             rewriteJson(context, json)
             Log.i(TAG, "migrated the api key out of $CONFIG_FILE")
         }
+        var model = json.optString("model", DEFAULT_MODEL)
+        if (model == DEPRECATED_GROQ_MODEL) {
+            // Groq shut this model down; upgrade existing installs silently.
+            model = DEFAULT_MODEL
+            json.put("model", model)
+            rewriteJson(context, json)
+        }
         return Config(
             apiKey = key,
             apiBase = json.optString("api_base", "https://api.groq.com/openai/v1"),
-            model = json.optString("model", DEFAULT_MODEL),
+            model = model,
             // empty means "the same as the text model"
             visionModel = json.optString("vision_model", ""),
             maxRounds = json.optInt("max_rounds", 0),

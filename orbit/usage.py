@@ -226,28 +226,28 @@ def summary(path: str, days: int = 7, now: float = 0.0) -> dict:
 def format_report(data: dict) -> str:
     """A few lines a person can read in a dialog."""
     def line(label: str, counts: dict) -> str:
-        return (f"{label}:{counts['calls']} timestextuse,"
-                f"input {counts['prompt']} / text {counts['completion']}"
-                f"(total {counts['total']})")
+        return (f"{label}: {counts['calls']} calls, "
+                f"input {counts['prompt']} / output {counts['completion']}"
+                f" (total {counts['total']})")
 
-    out = [line("textdays", data.get("today") or _empty()),
-           line(f"text {data.get('days', 7)} days", data.get("total") or _empty())]
+    out = [line("Today", data.get("today") or _empty()),
+           line(f"Last {data.get('days', 7)} days", data.get("total") or _empty())]
     models = data.get("by_model") or []
     if models:
         out.append("")
-        out.append("text:")
+        out.append("By model:")
         for item in models[:6]:
             out.append(f"  {item['model']}  {item['total']}({item['calls']} times)")
     providers = data.get("by_provider") or []
     if len(providers) > 1:
         out.append("")
-        out.append("text:")
+        out.append("By provider:")
         for item in providers[:6]:
             out.append(f"  {item['provider']}  {item['total']}({item['calls']} times)")
     days = data.get("by_day") or []
     if days:
         out.append("")
-        out.append("textdays:")
+        out.append("By day:")
         for item in days[:7]:
             out.append(f"  {item['day']}  {item['total']}({item['calls']} times)")
     return "\n".join(out)

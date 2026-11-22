@@ -25,14 +25,15 @@ MAX_TEXT = 6000
 #: would hand every such search to the user.
 BLOCK_TITLES = (
     "just a moment", "attention required", "access denied", "security check",
-    "CAPTCHA", "forbidden", "text", "text",
+    "CAPTCHA", "forbidden", "restricted access", "abnormal access",
 )
 #: Phrases a verification wall puts at the top of the page, where a search
 #: result's snippets do not reach.
 BLOCK_TEXTS = (
-    "drag the slider", "textdowntext", "please complete verification", "donesecurity check", "text",
+    "drag the slider", "drag the slider below", "please complete verification",
+    "complete the security check", "human identity verification",
     "verify you are human", "checking your browser", "unusual traffic",
-    "are you a robot", "please complete the security check", "text",
+    "are you a robot", "please complete the security check", "access too frequent",
 )
 
 
@@ -275,7 +276,7 @@ class WebPage:
     # -- acting ----------------------------------------------------------
 
     #: Clicking by label is what the model asks for, and the order matters: a
-    #: submit button that says textdown is the search button, while an <a> that
+    #: submit button that says "search" is the search button, while an <a> that
     #: merely contains those words is a hot-search link (measured: clicking the
     #: link searched for someone else's trending topic).
     _CLICK_JS = (

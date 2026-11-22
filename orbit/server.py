@@ -192,7 +192,7 @@ def _update(task_id: str, **fields) -> None:
 
 #: "stay on the NoteApp page" -- the user wants the task to end with that app in front.
 STAY_RE = re.compile(
-    r"(stay on|textat|stop at|textat|keep|do not close|do not close|do not exit|do not exit yet|keep\s+it\s+open|"
+    r"(stay on|stay in|stop at|stay at|keep|do not close|don't close|do not exit|do not exit yet|keep\s+it\s+open|"
     r"leave\s+it\s+open|stay\s+(in|on))",
     re.IGNORECASE,
 )
@@ -568,7 +568,7 @@ def _run(task_id: str, text: str, config: ServerConfig,
                 on_user_display=stayed,
                 leave_app=_wants_to_stay(text),
                 state="cancelled" if cancelled else outcome_state,
-                answer="textcancel" if cancelled else (result.answer or result.reason),
+                answer="cancelled" if cancelled else (result.answer or result.reason),
                 steps=[_step_dict(step) for step in result.steps],
             )
         except Exception as exc:  # noqa: BLE001 - surfaced to the app
@@ -577,7 +577,14 @@ def _run(task_id: str, text: str, config: ServerConfig,
             # the phone.
             import traceback
 
+            tb = traceback.format_exc()
             traceback.print_exc()
+            try:
+                with open(os.path.join(os.environ.get("HOME", "."), "last-error.txt"),
+                          "w", encoding="utf-8") as err_file:
+                    err_file.write(tb)
+            except Exception:  # noqa: BLE001 - diagnostics must not fail a task
+                pass
             _update(task_id, state="failed", answer=f"{type(exc).__name__}: {exc}")
         finally:
             # A task may have followed its app onto the user's display; the next
@@ -758,10 +765,10 @@ def _crawl_run(crawl_id: str, argv: list[str], device, crawl: dict, recover=None
                     if winner is not None:
                         with LOCK:
                             crawl["lines"].append(
-                                f"note:new map {len(fresh.screens)} text,"
-                                f"currently in use is {os.path.basename(winner[0])}"
-                                f"({len(winner[1].screens)} text) -  - "
-                                "replace with the new one,to`installed maps`textit`textusethistext`"
+                                f"Note: the new map has {len(fresh.screens)} screens, "
+                                f"but the one actually in use is {os.path.basename(winner[0])} "
+                                f"({len(winner[1].screens)} screens) -- "
+                                "to use the new one, open `Installed Maps` and choose `Pin this one`."
                             )
             except Exception:  # noqa: BLE001 - a note is optional
                 pass
@@ -892,10 +899,11 @@ class Handler(BaseHTTPRequestHandler):
         left = pacing_mod.remaining(config.pacing_path, package)
         if left > 0:
             commercial = pacing_mod.is_commercial(package)
-            reason = ("textminutestexttimes,textistextwanttextoftext"
-                      if commercial else "text,textwaittextdownagaincome")
+            reason = ("dozens of crawls in a few minutes is exactly the behaviour "
+                      "anti-abuse checks look for"
+                      if commercial else "it was just crawled; please wait a moment and try again")
             return self._send(429, {
-                "error": f"this App {reason},stillwantwait {int(left // 60) + 1} minutes.",
+                "error": f"This app {reason}; please wait another {int(left // 60) + 1} minutes.",
                 "retry_after": int(left),
             })
         os.makedirs(config.crawl_dir, exist_ok=True)
@@ -958,16 +966,16 @@ class Handler(BaseHTTPRequestHandler):
         model = str(body.get("model") or "") or getattr(config, "llm_model", "")
         vision = str(body.get("vision_model") or "") or model
         if not api_key:
-            return self._send(200, {"ok": False, "detail": "notext API Key"})
+            return self._send(200, {"ok": False, "detail": "No API Key provided"})
         try:
             # make_llm, not OpenAICompatClient directly: the protocol depends on
             # the base URL, and a connection test that speaks the wrong one
             # reports a 404 from a perfectly good endpoint.
             client = make_llm(api_key, api_base, model, vision)
-            reply = client.text("", "textonlyreplytext:textuse")
+            reply = client.text("", "Reply with just one word: available")
         except Exception as exc:  # noqa: BLE001 - reported to the settings dialog
             return self._send(200, {"ok": False, "detail": f"{type(exc).__name__}: {exc}"})
-        return self._send(200, {"ok": True, "detail": str(reply)[:80] or "(textreply)"})
+        return self._send(200, {"ok": True, "detail": str(reply)[:80] or "(no reply)"})
 
     def _drain_body(self) -> None:
         """Read and discard a request body so the connection stays usable."""
@@ -1344,7 +1352,7 @@ class Handler(BaseHTTPRequestHandler):
         config = self.server.config  # type: ignore[attr-defined]
         hands_off = bool(body.get("display") == 0) if "display" in body else False
         if hands_off and config.hands_off_factory is None:
-            return self._send(400, {"error": "managed modenottextuse(textnottext)"})
+            return self._send(400, {"error": "Managed mode is unavailable (device does not support it)"})
         _update(task_id, hands_off=hands_off)
         threading.Thread(target=_run, args=(task_id, text, config, hands_off),
                          daemon=True).start()
@@ -1493,7 +1501,7 @@ class Handler(BaseHTTPRequestHandler):
             crawl_dir = os.path.join(os.path.dirname(config.memory_path), "crawls") \
                 if config.memory_path else ""
             # How many *crawled* maps exist per package, so the app can say
-            # "stillhave N text": choose() shows one and the rest would otherwise be
+            # "N remaining": choose() shows one and the rest would otherwise be
             # invisible. Shipped maps are excluded -- they come back on every
             # start and are not something the user can act on.
             crawl_root = os.path.join(os.path.dirname(config.memory_path), "crawls") \
@@ -1593,7 +1601,7 @@ def start_server(port: int, config: ServerConfig) -> ThreadingHTTPServer:
 
 def make_llm(
     api_key: str,
-    api_base: str = "https://openrouter.ai/api/v1",
+    api_base: str = "https://api.groq.com/openai/v1",
     model: str = DEFAULT_MODEL,
     vision_model: str = "",
     mock: str = "",
@@ -1628,6 +1636,9 @@ def make_llm(
     return OpenAICompatClient(
         api_key=api_key, api_base=api_base, model=model,
         vision_model=vision_model or model,
+        # GPT-OSS reasons before answering; the old 800 budget was spent on
+        # thinking and left no tool call or final text behind.
+        max_tokens=4096 if "api.groq.com" in api_base else 800,
         # The reasoning switch is OpenRouter's; the client only sends it there.
         disable_reasoning=True,
         usage_path=usage_path, usage_sink=usage_sink,

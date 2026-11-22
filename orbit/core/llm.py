@@ -20,7 +20,7 @@ from typing import Iterable, Optional, Protocol, runtime_checkable
 
 import requests
 
-DEFAULT_MODEL = "llama-3.3-70b-versatile"
+DEFAULT_MODEL = "openai/gpt-oss-120b"
 
 
 @dataclass
@@ -74,6 +74,7 @@ class OpenAICompatClient:
     ) -> None:
         self.api_key = api_key
         self.api_base = api_base.rstrip("/")
+        self.is_groq = "api.groq.com" in self.api_base
         self.model = model
         self.vision_model = vision_model or model
         self.timeout = timeout
@@ -219,6 +220,12 @@ class OpenAICompatClient:
         except Exception as exc:  # noqa: BLE001 - accounting must not fail a task
             print(f"[usage] {type(exc).__name__}: {exc}")
 
+    def _normalize_payload(self, payload: dict) -> dict:
+        """Groq deprecated ``max_tokens`` in favor of ``max_completion_tokens``."""
+        if self.is_groq and "max_tokens" in payload:
+            payload["max_completion_tokens"] = payload.pop("max_tokens")
+        return payload
+
     def _post(self, payload: dict) -> dict:
         url = f"{self.api_base}/chat/completions"
         headers = {
@@ -226,7 +233,8 @@ class OpenAICompatClient:
             "Content-Type": "application/json",
         }
         try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
+            resp = requests.post(url, json=self._normalize_payload(payload),
+                                 headers=headers, timeout=self.timeout)
         except (requests.RequestException, OSError) as exc:
             raise LLMError(f"request to {url} failed: {exc}") from exc
         if resp.status_code != 200:
@@ -256,7 +264,8 @@ class OpenAICompatClient:
             "Content-Type": "application/json",
         }
         try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=self.timeout)
+            resp = requests.post(url, json=self._normalize_payload(payload),
+                                 headers=headers, timeout=self.timeout)
         except (requests.RequestException, OSError) as exc:
             raise LLMError(f"request to {url} failed: {exc}") from exc
         if resp.status_code != 200:

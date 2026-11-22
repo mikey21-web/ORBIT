@@ -7,7 +7,7 @@ Wi-Fi SSID and the device model:
     alex
     nameofDeviceModel
     phone number:181****8488
-    1101,text,WLAN text.
+    1101, connected, WLAN signal strength: three bars.
 
 None of that is navigation -- it is one phone's data. A profile names it so the
 map stays device-independent:
@@ -138,7 +138,7 @@ def collect_map_texts(map_path: str) -> list[str]:
 _DEVICE_NOISE = [
     (r"^\d+\.\d+\.\d+\.\d+", "ip address"),
     (r"^\d{2}:\d{2}$", "clock"),
-    (r"^\d{4}[-/text]\d{1,2}[-/text]\d{1,2}", "date"),
+    (r"^\d{4}[-/]\d{1,2}[-/]\d{1,2}", "date"),
     (r"^[\d,]{4,}$", "long number"),
     (r"^[^,]*,[^,]*,[^,]*,[^,]*$", "comma-joined status"),
 ]

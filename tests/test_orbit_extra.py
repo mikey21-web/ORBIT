@@ -62,3 +62,10 @@ def test_tracked_sources_have_no_cjk():
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")
         assert not any("\u4e00" <= char <= "\u9fff" for char in text), path
+
+
+def test_shipped_map_builds_operations_with_empty_label():
+    from orbit.core.app_map import AppMap
+
+    path = ROOT / "android-app/app/src/main/assets/maps/settings.yaml"
+    assert AppMap(path).build_operations()
