@@ -40,7 +40,8 @@ def test_package_identity():
     manifest = (ROOT / "android-app/app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
     strings = (ROOT / "android-app/app/src/main/res/values/strings.xml").read_text(encoding="utf-8")
     assert 'applicationId = "com.orbit.assistant"' in gradle
-    assert 'package="com.orbit.assistant"' in manifest
+    assert 'namespace = "com.orbit.assistant"' in gradle
+    assert "networkSecurityConfig" in manifest
     assert 'name="app_name">ORBIT<' in strings
 
 

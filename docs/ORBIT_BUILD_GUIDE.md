@@ -1,17 +1,21 @@
 # ORBIT build guide
 
-The build setup described here matches the repository configuration. Commands have
-not been executed in this workspace, so treat this as the documented procedure
-rather than a claim of a verified build.
+The debug build was verified with the checked-in Gradle wrapper. Release builds
+need your own signing key and have not been verified here.
 
 ## Prerequisites
 
 - JDK 17
 - Android SDK platform 34 and build tools
-- Gradle 8.x installed on the machine (there is no `gradlew` wrapper in this repository)
+- Gradle 8.9 via the checked-in wrapper (`android-app/gradlew`)
 - Python 3 for Chaquopy and host-side tooling
 - `rsync` for the sync scripts
 - For release builds: your own keystore and `android-app/keystore.properties`
+
+Set `ANDROID_HOME` to your SDK path, or create a local `android-app/local.properties`
+with `sdk.dir=...`. Set `ORBIT_PORT` before a build to change the agent's loopback
+port; the default is 8765. Chaquopy needs a supported build Python; if the default
+`python3` is too new, point `BUILD_PYTHON` at a Python 3.8–3.11 interpreter.
 
 ## Project layout
 
@@ -36,7 +40,7 @@ from `orbitcli_android/evaluation/build_map.py` into `app/src/main/python/`.
 
 ```bash
 cd android-app
-gradle assembleDebug
+./gradlew assembleDebug
 ```
 
 The output is `android-app/app/build/outputs/apk/debug/`.
@@ -49,7 +53,7 @@ committed. The default key alias and keystore name are `orbit`.
 
 ```bash
 cd android-app
-gradle assembleRelease
+./gradlew assembleRelease
 ```
 
 The output is `android-app/app/build/outputs/apk/release/`.
