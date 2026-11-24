@@ -10,12 +10,13 @@ function embedded(): boolean {
 
 export function getBase(): string {
   const host = window as unknown as { __ORBIT_BASE__?: string };
-  return localStorage.getItem(KEY_BASE) || host.__ORBIT_BASE__
-    || (embedded() ? "http://127.0.0.1:8765" : "/api");
+  if (embedded()) return host.__ORBIT_BASE__ || "http://127.0.0.1:8765";
+  return localStorage.getItem(KEY_BASE) || "/api";
 }
 export function getToken(): string {
   const host = window as unknown as { __ORBIT_TOKEN__?: string };
-  return localStorage.getItem(KEY_TOKEN) || host.__ORBIT_TOKEN__ || "";
+  if (embedded()) return host.__ORBIT_TOKEN__ || "";
+  return localStorage.getItem(KEY_TOKEN) || "";
 }
 export function setConnection(base: string, token: string) {
   localStorage.setItem(KEY_BASE, base || "/api");

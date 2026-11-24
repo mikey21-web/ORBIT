@@ -1179,7 +1179,10 @@ class Handler(BaseHTTPRequestHandler):
 
     def _cors(self) -> None:
         origin = self.headers.get("Origin", "")
-        if origin in {"file://", "null", "http://127.0.0.1:5173"}:
+        if origin in {
+            "file://", "null", "http://127.0.0.1:5173",
+            "https://appassets.androidplatform.net",
+        }:
             self.send_header("Access-Control-Allow-Origin", origin)
             self.send_header("Vary", "Origin")
             self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Agent-Token")
