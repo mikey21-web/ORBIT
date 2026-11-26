@@ -63,6 +63,16 @@ _QUICK_BLOCK = (
     "open ", "launch ", "tap ", "click ", "scroll ", "type ", "send ",
     "message ", "call ", "buy ", "pay ", "navigate ", "find the cheapest",
     "on my phone", "in the app", "settings", "bluetooth", "wifi",
+    "what is this", "what's this", "who is this", "this product", "this item",
+    "this page", "this ad", "on screen", "on the screen", "in this picture",
+    "where is it from", "find me this", "how much is this", "where can i buy",
+)
+
+_VISUAL_CUES = (
+    "what is this", "what's this", "who is this", "this product", "this item",
+    "this page", "this ad", "on screen", "on the screen", "in this picture",
+    "where is it from", "find me this", "how much is this", "where can i buy",
+    "what am i looking at", "read this",
 )
 
 
@@ -83,6 +93,11 @@ def _is_quick_question(text: str) -> bool:
     return question.startswith(_QUICK_START) and (
         question.endswith("?") or len(question.split()) <= 14
     )
+
+
+def _is_visual_question(text: str) -> bool:
+    question = _normalise_question(text)
+    return any(cue in question for cue in _VISUAL_CUES)
 
 
 class BodyTooLarge(Exception):
@@ -387,6 +402,39 @@ def _scan_maps(config: ServerConfig) -> list:
             if previous is None or os.path.getmtime(path) >= os.path.getmtime(previous):
                 found[name] = path
     return list(found.values())
+
+
+def _visual_answer_task(task_id: str, text: str, config: ServerConfig) -> None:
+    """Answer a question about what the user is looking at right now.
+
+    This is the voice path: the phone's own screen, not the agent's hidden
+    display. A single vision call is enough for "what is this product" and
+    avoids the whole tap-by-tap agent loop when the user only asked a question.
+    """
+    try:
+        device = (config.hands_off_factory() if config.hands_off_factory is not None
+                  else config.device_factory())
+        png = device.screenshot()
+        _update(task_id, frame=base64.b64encode(png).decode())
+        _publish_frame(png)
+        llm = config.llm_factory()
+        if hasattr(llm, "max_tokens"):
+            llm.max_tokens = 200
+        answer = str(llm.vision(
+            "You can see the user's phone screen. Answer their question about "
+            "what is visible. Identify a product, brand or source only when it "
+            "is actually visible; say what you cannot see instead of guessing. "
+            "Answer in one or two short sentences.",
+            text,
+            png,
+        )).strip()
+    except Exception as exc:  # noqa: BLE001 - report, never hang the UI
+        print(f"[server] visual answer failed: {exc}")
+        answer = ""
+    if not answer:
+        _update(task_id, state="failed", answer="Could not read this screen.", steps=[])
+        return
+    _update(task_id, state="done", answer=answer, steps=[])
 
 
 def _fast_answer_task(task_id: str, text: str, config: ServerConfig) -> None:
@@ -1532,6 +1580,10 @@ class Handler(BaseHTTPRequestHandler):
         if _is_quick_question(text):
             print(f"[server] task {task_id}: instant answer lane")
             threading.Thread(target=_fast_answer_task, args=(task_id, text, config),
+                             daemon=True).start()
+        elif hands_off and _is_visual_question(text):
+            print(f"[server] task {task_id}: visible-screen answer lane")
+            threading.Thread(target=_visual_answer_task, args=(task_id, text, config),
                              daemon=True).start()
         else:
             threading.Thread(target=_run, args=(task_id, text, config, hands_off),

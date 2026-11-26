@@ -68,6 +68,7 @@ class DiyaWakeService : Service() {
             stream = spotter!!.createStream()
             ensureRecognizer()
             startMicrophone()
+            Log.i(tag, "keyword spotting started")
         } catch (t: Throwable) {
             Log.e(tag, "failed to start keyword spotting", t)
             mainHandler.post { toast("Hey Diya could not start: ${t.message ?: "unknown error"}") }
@@ -301,7 +302,10 @@ class DiyaWakeService : Service() {
                 connection.doOutput = true
                 connection.connectTimeout = 5000
                 connection.readTimeout = 15000
-                val body = JSONObject().put("text", text).toString()
+                val body = JSONObject()
+                    .put("text", text)
+                    .put("display", 0)
+                    .toString()
                 connection.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                 val code = connection.responseCode
                 runCatching { connection.errorStream?.close() }
