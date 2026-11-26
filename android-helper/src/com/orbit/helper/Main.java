@@ -311,9 +311,19 @@ public final class Main {
             Image image = r.acquireLatestImage();
             if (image == null) return;
             try {
-                Bitmap bitmap = Bitmap.createBitmap(
-                        image.getWidth(), image.getHeight(), Bitmap.Config.ARGB_8888);
-                bitmap.copyPixelsFromBuffer(image.getPlanes()[0].getBuffer());
+                Image.Plane plane = image.getPlanes()[0];
+                int imgW = image.getWidth();
+                int imgH = image.getHeight();
+                int pixelStride = plane.getPixelStride();
+                int rowStride = plane.getRowStride();
+                int rowPadding = rowStride - pixelStride * imgW;
+                java.nio.ByteBuffer buffer = plane.getBuffer();
+                buffer.rewind();
+                Bitmap padded = Bitmap.createBitmap(
+                        imgW + rowPadding / pixelStride, imgH, Bitmap.Config.ARGB_8888);
+                padded.copyPixelsFromBuffer(buffer);
+                Bitmap bitmap = Bitmap.createBitmap(padded, 0, 0, imgW, imgH);
+                padded.recycle();
                 synchronized (latest) {
                     if (latest[0] != null) latest[0].recycle();
                     latest[0] = bitmap;
