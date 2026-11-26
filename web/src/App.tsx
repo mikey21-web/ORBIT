@@ -155,15 +155,19 @@ export default function App() {
               <img src="./orbit-icon.png" alt="Orbit" className="mb-6 h-14 w-14 rounded-2xl shadow-sm shadow-black/10" />
               <h1 className="font-display text-2xl font-semibold tracking-tight sm:text-3xl">What should I do on your phone?</h1>
               <p className="mt-3 max-w-md text-sm leading-relaxed text-muted">
-                Just type it. Orbit routes to a recorded macro first, then watches the screen when it needs to.
+                {connected === false
+                  ? "Add an API key in Settings to bring the local agent online. Then Orbit can watch the screen and drive tasks."
+                  : "Just type it. Orbit watches the screen and drives your phone step by step."}
               </p>
-              <div className="mt-8 flex max-w-xl flex-wrap justify-center gap-2">
-                {SUGGESTIONS.map((s) => (
-                  <button key={s} onClick={() => void send(s)} className="rounded-full border border-line bg-surface/60 px-4 py-2 text-xs text-muted transition-colors hover:border-persimmon/50 hover:text-linen">
-                    {s}
-                  </button>
-                ))}
-              </div>
+              {connected !== false && (
+                <div className="mt-8 flex max-w-xl flex-wrap justify-center gap-2">
+                  {SUGGESTIONS.map((s) => (
+                    <button key={s} onClick={() => void send(s)} className="rounded-full border border-line bg-surface/60 px-4 py-2 text-xs text-muted transition-colors hover:border-persimmon/50 hover:text-linen">
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-2 pb-4">

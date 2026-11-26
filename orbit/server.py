@@ -40,6 +40,50 @@ ALLOWED_LLM_HOSTS = frozenset({
     "api.anthropic.com", "openrouter.ai",
 })
 
+#: Answers that must not pay for a model round trip. Keys are normalised
+#: questions; the voice path uses these for the common "what is X" case.
+QUICK_ANSWERS = {
+    "what is the formula of calcium carbonate":
+        "CaCO₃ — one calcium, one carbon and three oxygen atoms.",
+    "what is the chemical formula of calcium carbonate":
+        "CaCO₃ — one calcium, one carbon and three oxygen atoms.",
+    "calcium carbonate formula":
+        "CaCO₃ — one calcium, one carbon and three oxygen atoms.",
+    "what is the formula of water": "H₂O.",
+    "what is the chemical formula of water": "H₂O.",
+    "hi": "Hi! What would you like me to do on your phone?",
+    "hello": "Hello! What would you like me to do on your phone?",
+}
+
+_QUICK_START = (
+    "what", "who", "why", "how", "when", "where", "which", "define",
+    "explain", "calculate", "is ", "are ", "do ", "does ", "can you tell me",
+)
+_QUICK_BLOCK = (
+    "open ", "launch ", "tap ", "click ", "scroll ", "type ", "send ",
+    "message ", "call ", "buy ", "pay ", "navigate ", "find the cheapest",
+    "on my phone", "in the app", "settings", "bluetooth", "wifi",
+)
+
+
+def _normalise_question(text: str) -> str:
+    return " ".join(str(text or "").strip().lower().split()).rstrip("?!. ")
+
+
+def _cached_quick_answer(text: str) -> str:
+    return QUICK_ANSWERS.get(_normalise_question(text), "")
+
+
+def _is_quick_question(text: str) -> bool:
+    question = _normalise_question(text)
+    if not question or question in QUICK_ANSWERS:
+        return bool(question)
+    if any(word in question for word in _QUICK_BLOCK):
+        return False
+    return question.startswith(_QUICK_START) and (
+        question.endswith("?") or len(question.split()) <= 14
+    )
+
 
 class BodyTooLarge(Exception):
     pass
@@ -343,6 +387,34 @@ def _scan_maps(config: ServerConfig) -> list:
             if previous is None or os.path.getmtime(path) >= os.path.getmtime(previous):
                 found[name] = path
     return list(found.values())
+
+
+def _fast_answer_task(task_id: str, text: str, config: ServerConfig) -> None:
+    """Answer a factual question without touching the virtual display.
+
+    The full task loop is for acting on the phone. A question like "what is the
+    formula of calcium carbonate" needs neither a screenshot nor a UI tree nor
+    an app map, and every one of those before the first model call costs
+    hundreds of milliseconds.
+    """
+    answer = _cached_quick_answer(text)
+    if not answer:
+        try:
+            llm = config.llm_factory()
+            if hasattr(llm, "max_tokens"):
+                llm.max_tokens = 120
+            answer = str(llm.text(
+                "Answer the user's factual question in one short sentence. "
+                "Do not use tools and do not claim to have used the phone.",
+                text,
+            )).strip()
+        except Exception as exc:  # noqa: BLE001 - report, never hang the UI
+            print(f"[server] fast answer failed: {exc}")
+            answer = ""
+    if not answer:
+        _update(task_id, state="failed", answer="Could not answer quickly.", steps=[])
+        return
+    _update(task_id, state="done", answer=answer, steps=[], frame="")
 
 
 def _run(task_id: str, text: str, config: ServerConfig,
@@ -1457,8 +1529,13 @@ class Handler(BaseHTTPRequestHandler):
         if hands_off and config.hands_off_factory is None:
             return self._send(400, {"error": "Managed mode is unavailable (device does not support it)"})
         _update(task_id, hands_off=hands_off)
-        threading.Thread(target=_run, args=(task_id, text, config, hands_off),
-                         daemon=True).start()
+        if _is_quick_question(text):
+            print(f"[server] task {task_id}: instant answer lane")
+            threading.Thread(target=_fast_answer_task, args=(task_id, text, config),
+                             daemon=True).start()
+        else:
+            threading.Thread(target=_run, args=(task_id, text, config, hands_off),
+                             daemon=True).start()
         self._send(200, {"id": task_id})
 
     def _get(self):

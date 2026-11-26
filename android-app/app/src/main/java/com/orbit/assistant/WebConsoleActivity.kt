@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.webkit.JavascriptInterface
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebSettings
@@ -15,6 +16,10 @@ import android.webkit.WebViewClient
 import android.widget.Toast
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewCompat
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URI
+import java.net.URL
 
 class WebConsoleActivity : Activity() {
     private lateinit var web: WebView
@@ -66,12 +71,85 @@ class WebConsoleActivity : Activity() {
 
         }
         val token = AgentToken.ensure(this)
+        web.addJavascriptInterface(NativeBridge(), "OrbitNative")
         val bridge = "window.__ORBIT_EMBEDDED__=true;" +
+            "window.__ORBIT_NATIVE__=true;" +
             "window.__ORBIT_TOKEN__='$token';" +
             "window.__ORBIT_BASE__='http://127.0.0.1:8765';"
         WebViewCompat.addDocumentStartJavaScript(web, bridge, setOf("*"))
         web.loadUrl(assetUrl)
         setContentView(web)
+    }
+
+    private inner class NativeBridge {
+        @JavascriptInterface
+        fun saveConfig(json: String): String {
+            return try {
+                val body = JSONObject(json)
+                AgentConfig.save(
+                    this@WebConsoleActivity,
+                    body.optString("api_key", ""),
+                    body.optString("api_base", ""),
+                    body.optString("model", ""),
+                    body.optString("vision_model", "")
+                )
+                JSONObject()
+                    .put("ok", true)
+                    .put("detail", "Saved. Starting the local agent.")
+                    .put("restart_required", true)
+                    .toString()
+            } catch (t: Throwable) {
+                JSONObject()
+                    .put("ok", false)
+                    .put("detail", "Could not save: ${t.message}")
+                    .toString()
+            }
+        }
+
+        @JavascriptInterface
+        fun testLlm(json: String): String {
+            return try {
+                val body = JSONObject(json)
+                val key = body.optString("api_key", "").trim()
+                if (key.isEmpty()) {
+                    return JSONObject().put("ok", false).put("detail", "Enter a key to test.").toString()
+                }
+                val base = body.optString("api_base", "").trim()
+                val uri = URI(base)
+                val allowed = setOf(
+                    "api.deepseek.com", "api.groq.com", "api.openai.com",
+                    "api.anthropic.com", "openrouter.ai",
+                )
+                if (uri.scheme != "https" || uri.host !in allowed) {
+                    return JSONObject().put("ok", false).put("detail", "Endpoint is not allowed.").toString()
+                }
+                val conn = URL(base.trimEnd('/') + "/models").openConnection() as HttpURLConnection
+                conn.requestMethod = "GET"
+                conn.setRequestProperty("Authorization", "Bearer $key")
+                conn.connectTimeout = 8000
+                conn.readTimeout = 8000
+                val code = conn.responseCode
+                conn.disconnect()
+                JSONObject()
+                    .put("ok", code in 200..299)
+                    .put("detail", if (code in 200..299) "Key works." else "Connection failed. Check the key, model and endpoint.")
+                    .toString()
+            } catch (t: Throwable) {
+                JSONObject()
+                    .put("ok", false)
+                    .put("detail", "Connection failed. Check the key, model and endpoint.")
+                    .toString()
+            }
+        }
+
+        @JavascriptInterface
+        fun restartAgent() {
+            Thread {
+                runCatching { stopService(Intent(this@WebConsoleActivity, AgentService::class.java)) }
+                Thread.sleep(400)
+                runCatching { startForegroundService(Intent(this@WebConsoleActivity, AgentService::class.java)) }
+            }.start()
+        }
     }
 
     private fun requestVoiceSetup() {

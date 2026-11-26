@@ -66,6 +66,7 @@ class DiyaWakeService : Service() {
         try {
             spotter = buildSpotter()
             stream = spotter!!.createStream()
+            ensureRecognizer()
             startMicrophone()
         } catch (t: Throwable) {
             Log.e(tag, "failed to start keyword spotting", t)
@@ -239,41 +240,49 @@ class DiyaWakeService : Service() {
         overlay = null
     }
 
+    private fun recognitionListener() = object : RecognitionListener {
+        override fun onReadyForSpeech(params: android.os.Bundle?) {
+            removeOverlay()
+        }
+        override fun onBeginningOfSpeech() {}
+        override fun onRmsChanged(rmsdB: Float) {}
+        override fun onBufferReceived(buffer: ByteArray?) {}
+        override fun onEndOfSpeech() {}
+        override fun onError(error: Int) {
+            toast("Could not hear you")
+        }
+        override fun onResults(results: android.os.Bundle?) {
+            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
+            val text = matches?.firstOrNull().orEmpty().trim()
+            if (text.isNotEmpty()) sendTask(text)
+        }
+        override fun onPartialResults(partialResults: android.os.Bundle?) {}
+        override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+    }
+
+    private fun ensureRecognizer() {
+        if (recognizer == null) {
+            recognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
+                setRecognitionListener(recognitionListener())
+            }
+        }
+    }
+
     private fun startListening() {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             toast("Microphone permission is needed")
             return
         }
-        recognizer?.destroy()
-        val speech = SpeechRecognizer.createSpeechRecognizer(this)
-        recognizer = speech
-        speech.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: android.os.Bundle?) {
-                removeOverlay()
-                toast("Listening...")
-            }
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() {}
-            override fun onError(error: Int) {
-                toast("Could not hear you")
-            }
-            override fun onResults(results: android.os.Bundle?) {
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                val text = matches?.firstOrNull().orEmpty().trim()
-                if (text.isNotEmpty()) sendTask(text)
-            }
-            override fun onPartialResults(partialResults: android.os.Bundle?) {}
-            override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
-        })
+        ensureRecognizer()
         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US.toLanguageTag())
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 350)
+            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 250)
         }
-        runCatching { speech.startListening(intent) }
+        runCatching { recognizer?.startListening(intent) }
     }
 
     private fun sendTask(text: String) {

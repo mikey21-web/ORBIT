@@ -3,6 +3,16 @@ import type { AppRow, Crawl, MapRow, OrbitTask, UsageData } from "./types";
 const KEY_BASE = "orbit.base";
 const KEY_TOKEN = "orbit.token";
 
+type NativeBridge = {
+  saveConfig?: (json: string) => string | Promise<string>;
+  testLlm?: (json: string) => string | Promise<string>;
+  restartAgent?: () => void;
+};
+
+function nativeBridge(): NativeBridge | undefined {
+  return (window as unknown as { OrbitNative?: NativeBridge }).OrbitNative;
+}
+
 function embedded(): boolean {
   const host = window as unknown as { __ORBIT_EMBEDDED__?: boolean };
   return host.__ORBIT_EMBEDDED__ === true || window.location.protocol === "file:";
@@ -40,7 +50,7 @@ async function request<T = unknown>(path: string, init: RequestInit = {}): Promi
   try {
     res = await fetch(`${getBase()}${path}`, { ...init, headers });
   } catch {
-    throw new ApiError(0, "Cannot reach the Orbit server. Is it running on port 8765?");
+    throw new ApiError(0, "The local Orbit agent is still starting. If you just saved settings, wait a few seconds; otherwise open Settings and Save.");
   }
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
@@ -94,9 +104,22 @@ export const api = {
     if (!res.ok) throw new ApiError(res.status, `frame ${res.status}`);
     return URL.createObjectURL(await res.blob());
   },
-  testLlm: (body: { api_key: string; api_base?: string; model?: string; vision_model?: string }) =>
-    post<{ ok: boolean; detail: string }>("/test-llm", body),
-  saveConfig: (body: { api_key: string; api_base?: string; model?: string; vision_model?: string }) =>
-    post<{ ok: boolean; detail: string; restart_required?: boolean }>("/config", body),
+  testLlm: async (body: { api_key: string; api_base?: string; model?: string; vision_model?: string }) => {
+    const bridge = nativeBridge();
+    if (embedded() && bridge?.testLlm) {
+      return JSON.parse(await bridge.testLlm(JSON.stringify(body))) as { ok: boolean; detail: string };
+    }
+    return post<{ ok: boolean; detail: string }>("/test-llm", body);
+  },
+  saveConfig: async (body: { api_key: string; api_base?: string; model?: string; vision_model?: string }) => {
+    const bridge = nativeBridge();
+    if (embedded() && bridge?.saveConfig) {
+      const raw = await bridge.saveConfig(JSON.stringify(body));
+      const saved = JSON.parse(raw) as { ok: boolean; detail: string; restart_required?: boolean };
+      if (saved.ok) bridge.restartAgent?.();
+      return saved;
+    }
+    return post<{ ok: boolean; detail: string; restart_required?: boolean }>("/config", body);
+  },
   markRisk: (packageName: string, note?: string) => post("/risk", { package: packageName, note }),
 };
