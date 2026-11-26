@@ -6,21 +6,19 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
-import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import android.provider.Settings
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
@@ -28,13 +26,10 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.Toast
-import com.k2fsa.sherpa.onnx.FeatureConfig
-import com.k2fsa.sherpa.onnx.KeywordSpotter
-import com.k2fsa.sherpa.onnx.KeywordSpotterConfig
-import com.k2fsa.sherpa.onnx.OnlineModelConfig
-import com.k2fsa.sherpa.onnx.OnlineStream
-import com.k2fsa.sherpa.onnx.OnlineTransducerModelConfig
 import org.json.JSONObject
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.StorageService
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
@@ -44,36 +39,61 @@ class DiyaWakeService : Service() {
     private val tag = "DiyaWake"
     private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
     private val running = AtomicBoolean(true)
-    private var spotter: KeywordSpotter? = null
-    private var stream: OnlineStream? = null
+    private val sampleRate = 16000
+
+    private var model: Model? = null
+    private var wakeRecognizer: Recognizer? = null
+    private var commandRecognizer: Recognizer? = null
     private var recorder: AudioRecord? = null
     private var recordThread: Thread? = null
-    private var recognizer: SpeechRecognizer? = null
     private var wakeLock: PowerManager.WakeLock? = null
     private var overlay: View? = null
     private var pulse: ValueAnimator? = null
-    private val sampleRate = 16000
+    private var screenReceiver: BroadcastReceiver? = null
+
+    @Volatile
+    private var listeningForCommand = false
+
+    @Volatile
+    private var lastWakeAt = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        Log.i(tag, "DiyaWake onCreate")
         startForegroundWithNotification()
         val power = getSystemService(Context.POWER_SERVICE) as PowerManager
         wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "orbit:diya-wake").apply {
             acquire(10 * 60 * 1000L)
         }
-        try {
-            spotter = buildSpotter()
-            stream = spotter!!.createStream()
-            ensureRecognizer()
-            startMicrophone()
-            Log.i(tag, "keyword spotting started")
-        } catch (t: Throwable) {
-            Log.e(tag, "failed to start keyword spotting", t)
-            mainHandler.post { toast("Hey Diya could not start: ${t.message ?: "unknown error"}") }
+        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             stopSelf()
+            return
         }
+        registerScreenReceiver()
+        Log.i(tag, "unpacking vosk model")
+        StorageService.unpack(
+            applicationContext,
+            "model-en-us",
+            "model",
+            { unpacked ->
+                model = unpacked
+                Log.i(tag, "vosk model ready")
+                try {
+                    startRecognition(unpacked)
+                } catch (t: Throwable) {
+                    Log.e(tag, "could not start recognition", t)
+                    toast("Voice engine could not start: ${t.message ?: "unknown error"}")
+                    stopSelf()
+                }
+            },
+            { error ->
+                Log.e(tag, "vosk model unpack failed", error)
+                toast("Voice model missing")
+                stopSelf()
+            },
+        )
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -86,36 +106,42 @@ class DiyaWakeService : Service() {
 
     override fun onDestroy() {
         running.set(false)
+        screenReceiver?.let { runCatching { unregisterReceiver(it) } }
+        screenReceiver = null
         recordThread?.join(1000)
         try { recorder?.stop() } catch (_: Throwable) {}
         recorder?.release()
-        stream?.release()
-        spotter?.release()
-        recognizer?.destroy()
+        wakeRecognizer?.let { runCatching { it.close() } }
+        commandRecognizer?.let { runCatching { it.close() } }
+        model?.let { runCatching { it.close() } }
         pulse?.cancel()
         overlay?.let { runCatching { getSystemService(WindowManager::class.java).removeView(it) } }
         wakeLock?.let { if (it.isHeld) it.release() }
         super.onDestroy()
     }
 
-    private fun buildSpotter(): KeywordSpotter {
-        val model = OnlineModelConfig(
-            transducer = OnlineTransducerModelConfig(
-                encoder = "kws/encoder-epoch-13-avg-2-chunk-16-left-64.int8.onnx",
-                decoder = "kws/decoder-epoch-13-avg-2-chunk-16-left-64.onnx",
-                joiner = "kws/joiner-epoch-13-avg-2-chunk-16-left-64.int8.onnx",
-            ),
-            tokens = "kws/tokens.txt",
-            numThreads = 1,
-        )
-        val config = KeywordSpotterConfig(
-            featConfig = FeatureConfig(sampleRate = sampleRate, featureDim = 80),
-            modelConfig = model,
-            keywordsFile = "kws/keywords.txt",
-            keywordsScore = 2.0f,
-            keywordsThreshold = 0.05f,
-        )
-        return KeywordSpotter(assetManager = assets, config = config)
+    private fun registerScreenReceiver() {
+        val filter = IntentFilter(Intent.ACTION_SCREEN_ON)
+        filter.addAction(Intent.ACTION_USER_PRESENT)
+        screenReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                Log.i(tag, "screen awake: resetting voice recognizers")
+                wakeRecognizer?.let { runCatching { it.reset() } }
+                commandRecognizer?.let { runCatching { it.reset() } }
+            }
+        }
+        registerReceiver(screenReceiver, filter)
+    }
+
+    private fun startRecognition(unpacked: Model) {
+        wakeRecognizer = Recognizer(unpacked, sampleRate.toFloat(), WAKE_GRAMMAR).apply {
+            runCatching { setEndpointerDelays(5.0f, 0.2f, 3.0f) }
+        }
+        commandRecognizer = Recognizer(unpacked, sampleRate.toFloat()).apply {
+            runCatching { setEndpointerDelays(5.0f, 0.45f, 8.0f) }
+        }
+        startMicrophone()
+        Log.i(tag, "vosk wake loop started")
     }
 
     private fun openRecorder(): AudioRecord {
@@ -143,14 +169,9 @@ class DiyaWakeService : Service() {
     }
 
     private fun startMicrophone() {
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            stopSelf()
-            return
-        }
         var active = openRecorder()
         this.recorder = active
         active.startRecording()
-        val currentStream = stream ?: return
         recordThread = Thread {
             val buffer = ShortArray(1600)
             var consecutiveErrors = 0
@@ -161,16 +182,36 @@ class DiyaWakeService : Service() {
                 if (read > 0) {
                     consecutiveErrors = 0
                     totalSamples += read
-                    val samples = FloatArray(read) { buffer[it] / 32768.0f }
-                    currentStream.acceptWaveform(samples, sampleRate = sampleRate)
-                    val kws = spotter ?: break
-                    while (kws.isReady(currentStream)) {
-                        kws.decode(currentStream)
-                        val keyword = kws.getResult(currentStream).keyword
-                        if (keyword.isNotBlank()) {
-                            kws.reset(currentStream)
-                            Log.i(tag, "wake detected: $keyword")
-                            mainHandler.post { onWake() }
+                    if (listeningForCommand) {
+                        val rec = commandRecognizer ?: continue
+                        try {
+                            if (rec.acceptWaveForm(buffer, read)) {
+                                val text = voskText(rec.getResult())
+                                if (text.isNotBlank()) mainHandler.post { onCommand(text) }
+                            }
+                        } catch (t: Throwable) {
+                            Log.e(tag, "command decode failed", t)
+                        }
+                    } else {
+                        val rec = wakeRecognizer ?: continue
+                        try {
+                            val finalText = if (rec.acceptWaveForm(buffer, read)) {
+                                voskText(rec.getResult())
+                            } else {
+                                ""
+                            }
+                            if (isWake(finalText)) {
+                                rec.reset()
+                                mainHandler.post { onWake() }
+                            } else if (finalText.isEmpty()) {
+                                val partial = voskText(rec.getPartialResult())
+                                if (isWake(partial)) {
+                                    rec.reset()
+                                    mainHandler.post { onWake() }
+                                }
+                            }
+                        } catch (t: Throwable) {
+                            Log.e(tag, "wake decode failed", t)
                         }
                     }
                 } else {
@@ -193,10 +234,42 @@ class DiyaWakeService : Service() {
         }.also { it.isDaemon = true; it.start() }
     }
 
+    private fun voskText(json: String): String {
+        return try {
+            val obj = JSONObject(json)
+            val raw = obj.optString("text", obj.optString("partial", ""))
+            raw.trim().lowercase(Locale.US)
+        } catch (_: Throwable) {
+            ""
+        }
+    }
+
+    private fun isWake(text: String): Boolean {
+        if (text.isBlank()) return false
+        return text.contains("hey diya") || text.contains("hey dee ya") ||
+            text.contains("hey dia") || text.contains("hi diya")
+    }
+
     private fun onWake() {
+        if (listeningForCommand) return
+        val now = System.currentTimeMillis()
+        if (now - lastWakeAt < 2000) return
+        lastWakeAt = now
+        listeningForCommand = true
+        commandRecognizer?.let { runCatching { it.reset() } }
+        Log.i(tag, "wake detected: HEY_DIYA")
         toast("Hey Diya heard")
         showOverlay()
-        startListening()
+    }
+
+    private fun onCommand(text: String) {
+        if (!listeningForCommand) return
+        listeningForCommand = false
+        removeOverlay()
+        wakeRecognizer?.let { runCatching { it.reset() } }
+        commandRecognizer?.let { runCatching { it.reset() } }
+        toast("Heard: $text")
+        sendTask(text)
     }
 
     private fun showOverlay() {
@@ -223,7 +296,6 @@ class DiyaWakeService : Service() {
             layoutParams = FrameLayout.LayoutParams(dp(76), dp(76)).apply {
                 gravity = Gravity.CENTER
             }
-            setOnClickListener { startListening() }
         }
         val root = FrameLayout(this).apply {
             addView(glow)
@@ -272,53 +344,7 @@ class DiyaWakeService : Service() {
         overlay = null
     }
 
-    private fun recognitionListener() = object : RecognitionListener {
-        override fun onReadyForSpeech(params: android.os.Bundle?) {
-            removeOverlay()
-        }
-        override fun onBeginningOfSpeech() {}
-        override fun onRmsChanged(rmsdB: Float) {}
-        override fun onBufferReceived(buffer: ByteArray?) {}
-        override fun onEndOfSpeech() {}
-        override fun onError(error: Int) {
-            toast("Could not hear you")
-        }
-        override fun onResults(results: android.os.Bundle?) {
-            val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-            val text = matches?.firstOrNull().orEmpty().trim()
-            if (text.isNotEmpty()) sendTask(text)
-        }
-        override fun onPartialResults(partialResults: android.os.Bundle?) {}
-        override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
-    }
-
-    private fun ensureRecognizer() {
-        if (recognizer == null) {
-            recognizer = SpeechRecognizer.createSpeechRecognizer(this).apply {
-                setRecognitionListener(recognitionListener())
-            }
-        }
-    }
-
-    private fun startListening() {
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            toast("Microphone permission is needed")
-            return
-        }
-        ensureRecognizer()
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.US.toLanguageTag())
-            putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-            putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 350)
-            putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 250)
-        }
-        runCatching { recognizer?.startListening(intent) }
-    }
-
     private fun sendTask(text: String) {
-        toast("Heard: $text")
         Thread {
             try {
                 if (!AgentService.isRunning()) {
@@ -387,5 +413,7 @@ class DiyaWakeService : Service() {
 
     companion object {
         const val ACTION_STOP = "com.orbit.assistant.STOP_DIYA_WAKE"
+        private const val WAKE_GRAMMAR =
+            "[\"hey diya\", \"hey dee ya\", \"hey dia\", \"hi diya\", \"[unk]\"]"
     }
 }

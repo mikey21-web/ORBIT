@@ -113,4 +113,6 @@ dependencies {
     // that fetches during parse (measured on a search results page).
     implementation("androidx.webkit:webkit:1.11.0")
     implementation("com.github.k2-fsa.sherpa-onnx:sherpa-onnx:v1.13.5")
+    implementation("com.alphacephei:vosk-android:0.3.75@aar")
+    implementation("net.java.dev.jna:jna:5.18.1@aar")
 }
