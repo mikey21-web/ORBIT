@@ -112,10 +112,34 @@ class DiyaWakeService : Service() {
             featConfig = FeatureConfig(sampleRate = sampleRate, featureDim = 80),
             modelConfig = model,
             keywordsFile = "kws/keywords.txt",
-            keywordsScore = 1.0f,
-            keywordsThreshold = 0.1f,
+            keywordsScore = 2.0f,
+            keywordsThreshold = 0.05f,
         )
         return KeywordSpotter(assetManager = assets, config = config)
+    }
+
+    private fun openRecorder(): AudioRecord {
+        val format = AudioFormat.ENCODING_PCM_16BIT
+        val min = AudioRecord.getMinBufferSize(
+            sampleRate, AudioFormat.CHANNEL_IN_MONO, format
+        )
+        val rec = AudioRecord.Builder()
+            .setAudioSource(MediaRecorder.AudioSource.VOICE_RECOGNITION)
+            .setAudioFormat(
+                AudioFormat.Builder()
+                    .setEncoding(format)
+                    .setSampleRate(sampleRate)
+                    .setChannelMask(AudioFormat.CHANNEL_IN_MONO)
+                    .build()
+            )
+            .setBufferSizeInBytes(maxOf(min * 2, sampleRate))
+            .setPrivacySensitive(true)
+            .build()
+        if (rec.state != AudioRecord.STATE_INITIALIZED) {
+            rec.release()
+            throw IllegalStateException("microphone unavailable")
+        }
+        return rec
     }
 
     private fun startMicrophone() {
@@ -123,41 +147,48 @@ class DiyaWakeService : Service() {
             stopSelf()
             return
         }
-        val format = AudioFormat.ENCODING_PCM_16BIT
-        val min = AudioRecord.getMinBufferSize(
-            sampleRate, AudioFormat.CHANNEL_IN_MONO, format
-        )
-        val recorder = AudioRecord(
-            MediaRecorder.AudioSource.MIC,
-            sampleRate,
-            AudioFormat.CHANNEL_IN_MONO,
-            format,
-            maxOf(min * 2, sampleRate),
-        )
-        if (recorder.state != AudioRecord.STATE_INITIALIZED) {
-            recorder.release()
-            throw IllegalStateException("microphone unavailable")
-        }
-        this.recorder = recorder
-        recorder.startRecording()
+        var active = openRecorder()
+        this.recorder = active
+        active.startRecording()
         val currentStream = stream ?: return
         recordThread = Thread {
             val buffer = ShortArray(1600)
+            var consecutiveErrors = 0
+            var loops = 0
+            var totalSamples = 0L
             while (running.get()) {
-                val read = recorder.read(buffer, 0, buffer.size)
-                if (read <= 0) continue
-                val samples = FloatArray(read) { buffer[it] / 32768.0f }
-                currentStream.acceptWaveform(samples, sampleRate = sampleRate)
-                val kws = spotter ?: break
-                while (kws.isReady(currentStream)) {
-                    kws.decode(currentStream)
-                    val keyword = kws.getResult(currentStream).keyword
-                    if (keyword.isNotBlank()) {
-                        kws.reset(currentStream)
-                        Log.i(tag, "wake detected: $keyword")
-                        mainHandler.post { onWake() }
+                val read = active.read(buffer, 0, buffer.size, AudioRecord.READ_NON_BLOCKING)
+                if (read > 0) {
+                    consecutiveErrors = 0
+                    totalSamples += read
+                    val samples = FloatArray(read) { buffer[it] / 32768.0f }
+                    currentStream.acceptWaveform(samples, sampleRate = sampleRate)
+                    val kws = spotter ?: break
+                    while (kws.isReady(currentStream)) {
+                        kws.decode(currentStream)
+                        val keyword = kws.getResult(currentStream).keyword
+                        if (keyword.isNotBlank()) {
+                            kws.reset(currentStream)
+                            Log.i(tag, "wake detected: $keyword")
+                            mainHandler.post { onWake() }
+                        }
                     }
+                } else {
+                    consecutiveErrors++
+                    if (consecutiveErrors >= 25) {
+                        Log.w(tag, "microphone read failing ($read); restarting AudioRecord")
+                        runCatching { active.stop() }
+                        runCatching { active.release() }
+                        active = openRecorder()
+                        this.recorder = active
+                        runCatching { active.startRecording() }
+                        consecutiveErrors = 0
+                    }
+                    Thread.sleep(20)
                 }
+                loops++
+                if (loops % 100 == 0) Log.i(tag, "audio alive: $totalSamples samples")
+                Thread.sleep(10)
             }
         }.also { it.isDaemon = true; it.start() }
     }
